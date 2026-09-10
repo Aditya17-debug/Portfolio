@@ -4,337 +4,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aditya Bagdwal — Developer &amp; Engineer</title>
     <meta name="description"
-        content="Aditya Bagdwal — Computer Science Student &amp; Freelance Developer. Building elegant web applications and open to learning.">
-    <title>Aditya Bagdwal | Portfolio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
-        rel="stylesheet">
+        content="Portfolio of Aditya Bagdwal — Computer Science student and freelance developer crafting modern, high-performance digital experiences.">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 
 <body>
 
-    <!-- Background effects -->
-    <div class="bg-noise"></div>
-    <div class="bg-orb bg-orb--plum"></div>
-    <div class="bg-orb bg-orb--rose"></div>
-    <div class="bg-orb bg-orb--center"></div>
-    <div class="cursor-glow" id="cursorGlow"></div>
+    <!-- ═══════════════ VERTICAL LEFT RAIL (NAV & SOCIALS) ═══════════════ -->
+    <aside class="nav-rail">
+        <!-- Brand Monogram Top -->
+        <a href="#hero" class="nav-rail__logo" title="Aditya Bagdwal">A</a>
 
-    <!-- ═══════════════ NAVIGATION ═══════════════ -->
-    <nav class="nav" id="navbar">
-        <div class="container nav__inner">
-            <a href="#" class="nav__logo">
-                <span class="nav__logo-mark">A</span>
-                Aditya
+        <!-- Vertical Rotated Links -->
+        <nav class="nav-rail__links">
+            <a href="#contact" class="nav-rail__link">Contact</a>
+            <a href="#projects" class="nav-rail__link">Projects</a>
+            <a href="#skills" class="nav-rail__link">Skills</a>
+            <a href="#about" class="nav-rail__link">Details</a>
+        </nav>
+
+        <!-- Bottom Social Links -->
+        <div class="nav-rail__socials">
+            <a href="https://github.com/Aditya17-debug" target="_blank" rel="noopener noreferrer"
+                class="nav-rail__social-link" title="GitHub" aria-label="GitHub Profile">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" clip-rule="evenodd"
+                        d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                </svg>
             </a>
-            <div class="nav__links" id="navLinks">
-                <a href="#about" class="nav__link" id="nav-about">About</a>
-                <a href="#skills" class="nav__link" id="nav-skills">Skills</a>
-                <a href="#projects" class="nav__link" id="nav-projects">Projects</a>
-                <a href="#contact" class="nav__cta" id="nav-contact">Let's Talk</a>
-            </div>
-            <button class="nav__toggle" id="navToggle" aria-label="Toggle navigation">
-                <span></span><span></span><span></span>
-            </button>
+            <a href="https://www.linkedin.com/in/aditya-bagdwal-a4a887376/" target="_blank" rel="noopener noreferrer"
+                class="nav-rail__social-link" title="LinkedIn" aria-label="LinkedIn Profile">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v5.759z" />
+                </svg>
+            </a>
+            <a href="https://leetcode.com/u/bgd_codes/" target="_blank" rel="noopener noreferrer"
+                class="nav-rail__social-link" title="LeetCode" aria-label="LeetCode Profile">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="m15.42 16.94-2.25 2.17a2.1 2.1 0 0 1-1.52.56 2.1 2.1 0 0 1-1.52-.56l-3.61-3.63a2.18 2.18 0 0 1-.58-1.55 2.07 2.07 0 0 1 .58-1.52l3.6-3.65a2.1 2.1 0 0 1 1.53-.54 2.08 2.08 0 0 1 1.52.55l2.25 2.17A1.14 1.14 0 0 0 17 9.33l-2.17-2.2a4.24 4.24 0 0 0-2-1.12l2.06-2.08a1.15 1.15 0 0 0-1.62-1.62l-8.43 8.42a4.48 4.48 0 0 0-1.24 3.2 4.57 4.57 0 0 0 1.24 3.23l3.63 3.63A4.38 4.38 0 0 0 11.66 22a4.45 4.45 0 0 0 3.2-1.25L17 18.56a1.14 1.14 0 0 0-1.61-1.62z" />
+                    <path d="M19.34 12.84h-8.45a1.12 1.12 0 0 0 0 2.24h8.45a1.12 1.12 0 0 0 0-2.24" />
+                </svg>
+            </a>
         </div>
-    </nav>
+    </aside>
 
-    <!-- ═══════════════ HERO ═══════════════ -->
-    <section class="hero" id="hero">
-        <div class="container">
-            <div class="hero__layout">
+    <!-- ═══════════════ TOP CONTROLS (THEME TOGGLE) ═══════════════ -->
+    <div class="top-controls">
+        <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle dark/light theme" title="Toggle theme">
+            <svg class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- ═══════════════ MAIN WRAPPER ═══════════════ -->
+    <div class="main-wrapper">
+
+        <!-- ═══════════════ HERO SECTION ═══════════════ -->
+        <section class="hero" id="hero">
+            <div class="container">
                 <div class="hero__content">
-                    <div class="hero__badge">
-                        <span class="hero__badge-dot"></span>
-                        Available for opportunities
+                    <div class="hero__kicker">
+                        <span class="hero__kicker-dot"></span>
+                        ADITYA BAGDWAL
                     </div>
                     <h1 class="hero__title">
-                        <span class="hero__title-line">Hi, I'm <span class="hero__title-accent">Aditya</span></span>
-                        <span class="hero__title-line">Bagdwal.</span>
+                        <span class="hero__title-primary">
+                            Developer
+                            <span class="hero__hairline"></span>
+                        </span>
+                        <span class="hero__title-secondary">
+                            <span class="hero__plus">+</span> Engineer
+                        </span>
                     </h1>
                     <p class="hero__desc">
-                        A Computer Science student &amp; freelance developer passionate about
-                        building modern web experiences. Eager to learn, open to new knowledge,
-                        and always looking for exciting projects and collaborations.
+                        A Computer Science student &amp; freelance developer passionate about crafting modern,
+                        performant web applications, solving algorithmic challenges, and exploring emerging digital
+                        technologies.
                     </p>
                     <div class="hero__actions">
                         <a href="#projects" class="btn btn--primary">
-                            <span>View My Work</span>
-                            <span class="btn__arrow">→</span>
+                            <span>Explore Projects</span>
+                            <span>→</span>
                         </a>
                         <a href="#contact" class="btn btn--ghost">Get In Touch</a>
                     </div>
-                    <div class="hero__stats">
-                        <div class="hero__stat">
-                            <div class="hero__stat-value" id="stat-years">0</div>
-                            <div class="hero__stat-label">Years Experience</div>
-                        </div>
-                        <div class="hero__stat">
-                            <div class="hero__stat-value" id="stat-projects">0</div>
-                            <div class="hero__stat-label">Projects Built</div>
-                        </div>
-                        <div class="hero__stat">
-                            <div class="hero__stat-value" id="stat-clients">0</div>
-                            <div class="hero__stat-label">Happy Clients</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="hero__visual">
-                    <div class="hero__avatar-ring">
-                        <div class="hero__avatar-inner">
-                            <span class="hero__avatar-initials">AB</span>
-                        </div>
-                    </div>
-                    <div class="hero__avatar-float hero__avatar-float--1">⚛️ React</div>
-                    <div class="hero__avatar-float hero__avatar-float--2">🐍 Python</div>
-                    <div class="hero__avatar-float hero__avatar-float--3">☁️ AWS</div>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- ═══════════════ ABOUT ═══════════════ -->
-    <section class="section" id="about">
-        <div class="container">
-            <div class="section__header reveal">
-                <div class="section__label">About Me</div>
-                <h2 class="section__title">Crafting digital experiences<br>with precision & care</h2>
-            </div>
-            <div class="about__grid">
-                <div class="about__text reveal">
-                    <p>
-                        Hello! I'm <strong>Aditya Bagdwal</strong>, a <strong>Computer Science student</strong> with a
-                        passion for software development and hands-on learning. My journey started with a fascination
-                        for how computers work, and today I channel that curiosity into crafting clean, functional web
-                        experiences.
-                    </p>
-                    <p>
-                        As a motivated <strong>freelancer</strong>, I love collaborating on real-world projects where I
-                        can turn ideas into reality while refining my technical skills. From front-end interfaces to
-                        back-end logic, I take pride in writing neat code and delivering dependable results.
-                    </p>
-                    <p>
-                        I am always <strong>open to knowledge</strong>, eager to learn new frameworks, take advice from
-                        experienced engineers, and explore emerging technologies. When I'm not coding, you'll find me
-                        solving algorithmic puzzles, contributing to open-source, or picking up something new.
-                    </p>
-                </div>
-                <div class="about__card reveal reveal-delay-1" id="aboutCodeCard">
-                    <div class="about__card-header">
-                        <div class="about__card-dots">
-                            <span class="dot dot--red" title="Close"></span>
-                            <span class="dot dot--yellow" title="Minimize"></span>
-                            <span class="dot dot--green" title="Maximize"></span>
-                        </div>
-                        <span class="about__card-filename">aditya.config.js</span>
-                        <button class="about__card-copy" id="copyCodeBtn" aria-label="Copy code">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                            <span class="copy-text">Copy</span>
-                        </button>
-                    </div>
-                    <div class="about__code">
-                        <span class="code-keyword">const</span> <span class="code-variable">aditya</span> <span
-                            class="code-punctuation">=</span> <span class="code-bracket">{</span><br>
-                        &nbsp;&nbsp;<span class="code-keyword">name</span><span class="code-punctuation">:</span> <span
-                            class="code-string">"Aditya Bagdwal"</span><span class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;<span class="code-keyword">role</span><span class="code-punctuation">:</span> <span
-                            class="code-string">"CS Student &amp; Freelancer"</span><span
-                            class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;<span class="code-keyword">education</span><span class="code-punctuation">:</span>
-                        <span class="code-string">"B.Tech in Computer Science"</span><span
-                            class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;<span class="code-keyword">passions</span><span class="code-punctuation">:</span>
-                        <span class="code-bracket">[</span><br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Continuous Learning"</span><span
-                            class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Problem Solving"</span><span
-                            class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Web Development"</span><span
-                            class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Open Source"</span><br>
-                        &nbsp;&nbsp;<span class="code-bracket">]</span><span class="code-punctuation">,</span><br>
-                        &nbsp;&nbsp;<span class="code-keyword">hireable</span><span class="code-punctuation">:</span>
-                        <span class="code-boolean">true</span><br>
-                        <span class="code-bracket">}</span><span class="code-punctuation">;</span>
-                    </div>
+            <!-- Scroll Indicator -->
+            <div class="hero__scroll">
+                <div class="hero__mouse">
+                    <div class="hero__mouse-wheel"></div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ═══════════════ SKILLS ═══════════════ -->
-    <section class="section" id="skills">
-        <div class="container">
-            <div class="section__header reveal">
-                <div class="section__label">Skills</div>
-                <h2 class="section__title">Technologies I work with</h2>
-                <p class="section__desc">Technologies and tools I use to build projects and explore modern development.
-                </p>
-            </div>
-            <div class="skills__grid">
-                <div class="skill-card reveal" id="skill-frontend">
-                    <div class="skill-card__icon">🎨</div>
-                    <div class="skill-card__title">Frontend Development</div>
-                    <div class="skill-card__desc">Building responsive, performant, and accessible interfaces with modern
-                        frameworks.</div>
-                    <div class="skill-card__tags">
-                        <span class="skill-tag">React</span>
-                        <span class="skill-tag">Next.js</span>
-                        <span class="skill-tag">TypeScript</span>
-                        <span class="skill-tag">Tailwind CSS</span>
-                    </div>
+        <!-- ═══════════════ DETAILS / ABOUT SECTION ═══════════════ -->
+        <section class="section" id="about">
+            <div class="container">
+                <div class="section__header reveal">
+                    <div class="section__index">01 // DETAILS</div>
+                    <h2 class="section__title">Crafting digital experiences<br>with precision &amp; care</h2>
+                    <p class="section__desc">A disciplined approach to code architecture, responsive design, and
+                        collaborative software creation.</p>
                 </div>
-                <div class="skill-card reveal reveal-delay-1" id="skill-backend">
-                    <div class="skill-card__icon">⚙️</div>
-                    <div class="skill-card__title">Backend Development</div>
-                    <div class="skill-card__desc">Designing scalable APIs, microservices, and robust data pipelines.
+                <div class="about__grid">
+                    <div class="about__text reveal">
+                        <p>
+                            Hello! I'm <strong>Aditya Bagdwal</strong>, a <strong>Computer Science student</strong> with
+                            a relentless passion for software development and hands-on learning. My journey began with a
+                            curiosity for how computers and algorithms solve real problems, which evolved into
+                            engineering modern web applications.
+                        </p>
+                        <p>
+                            As a motivated <strong>freelancer</strong>, I collaborate on real-world projects turning
+                            abstract ideas into reliable, dependable code. Whether structuring backend REST APIs or
+                            designing responsive user interfaces, I prioritize maintainability and performance.
+                        </p>
+                        <p>
+                            I believe in <strong>continuous growth</strong>—regularly solving algorithmic puzzles on
+                            LeetCode, learning new frameworks, contributing to open-source, and absorbing wisdom from
+                            senior engineers.
+                        </p>
                     </div>
-                    <div class="skill-card__tags">
-                        <span class="skill-tag">Node.js</span>
-                        <span class="skill-tag">Python</span>
-                        <span class="skill-tag">Go</span>
-                        <span class="skill-tag">PostgreSQL</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- ═══════════════ PROJECTS ═══════════════ -->
-    <section class="section" id="projects">
-        <div class="container">
-            <div class="section__header reveal">
-                <div class="section__label">Projects</div>
-                <h2 class="section__title">Featured work</h2>
-                <p class="section__desc"></p>
-            </div>
-            <div class="projects__grid">
-                <!-- Projects temporarily removed -->
-            </div>
-        </div>
-    </section>
-
-
-
-    <!-- ═══════════════ CONTACT ═══════════════ -->
-    <section class="section contact" id="contact">
-        <div class="container">
-            <div class="reveal">
-                <div class="section__label" style="justify-content: center;">Get In Touch</div>
-                <h2 class="contact__heading">Let's build something<br><span class="hero__title-accent">great
-                        together</span>.</h2>
-                <p class="contact__desc">
-                    I'm always open to discussing new projects, creative ideas,
-                    or opportunities to be part of your vision.
-                </p>
-                <!-- Contact Form Card -->
-                <div class="contact__form-card reveal">
-                    <div class="contact__form-header">
-                        <div class="contact__form-badge">
-                            <span class="contact__form-badge-dot"></span>
-                            Quick Message
-                        </div>
-                        <h3 class="contact__form-title">Send a Direct Note</h3>
-                        <p class="contact__form-subtitle">Have a project, freelance idea, or question? Send a message directly to my inbox.</p>
-                    </div>
-                    <form class="contact__form" id="contactForm">
-                        <div class="contact__form-row">
-                            <div class="contact__form-group">
-                                <label for="contact-name" class="contact__form-label">NAME</label>
-                                <input type="text" id="contact-name" name="name" class="contact__form-input" placeholder="Your name" required>
+                    <!-- Interactive Config Card -->
+                    <div class="about__card reveal reveal-delay-1" id="aboutCodeCard">
+                        <div class="about__card-header">
+                            <div class="about__card-dots">
+                                <span class="dot dot--red"></span>
+                                <span class="dot dot--yellow"></span>
+                                <span class="dot dot--green"></span>
                             </div>
-                            <div class="contact__form-group">
-                                <label for="contact-user-email" class="contact__form-label">EMAIL</label>
-                                <input type="email" id="contact-user-email" name="email" class="contact__form-input" placeholder="your.email@example.com" required>
-                            </div>
-                        </div>
-                        <div class="contact__form-group">
-                            <label for="contact-subject" class="contact__form-label">SUBJECT</label>
-                            <input type="text" id="contact-subject" name="subject" class="contact__form-input" placeholder="Project collaboration / Freelance query" required>
-                        </div>
-                        <div class="contact__form-group">
-                            <label for="contact-message" class="contact__form-label">MESSAGE</label>
-                            <textarea id="contact-message" name="message" class="contact__form-textarea" rows="4" placeholder="Write your message here..." required></textarea>
-                        </div>
-                        <div class="contact__form-footer">
-                            <button type="submit" class="btn btn--primary contact__form-btn" id="contactSubmitBtn">
-                                <span class="btn-text">Send Message</span>
-                                <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            <span class="about__card-filename">aditya.config.js</span>
+                            <button class="about__card-copy" id="copyCodeBtn" aria-label="Copy code">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                 </svg>
+                                <span class="copy-text">Copy</span>
                             </button>
-                            <div class="contact__form-status" id="contactFormStatus" role="status" aria-live="polite"></div>
                         </div>
-                    </form>
-                </div>
-
-                <div class="contact__grid">
-                    <a href="https://github.com/Aditya17-debug" target="_blank" rel="noopener noreferrer"
-                        class="contact__card" id="contact-github">
-                        <span class="contact__card-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" clip-rule="evenodd"
-                                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                            </svg>
-                        </span>
-                        <span>GitHub</span>
-                    </a>
-                    <a href="https://www.linkedin.com/in/aditya-bagdwal-a4a887376/" target="_blank"
-                        rel="noopener noreferrer" class="contact__card" id="contact-linkedin">
-                        <span class="contact__card-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path
-                                    d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v5.759z" />
-                            </svg>
-                        </span>
-                        <span>LinkedIn</span>
-                    </a>
-                    <a href="https://leetcode.com/u/bgd_codes/" target="_blank" rel="noopener noreferrer"
-                        class="contact__card" id="contact-leetcode">
-                        <span class="contact__card-icon">⚡</span>
-                        <span>LeetCode</span>
-                    </a>
-
+                        <div class="about__code">
+                            <span class="code-keyword">const</span> <span class="code-variable">aditya</span> <span
+                                class="code-punctuation">=</span> <span class="code-bracket">{</span><br>
+                            &nbsp;&nbsp;<span class="code-keyword">name</span><span class="code-punctuation">:</span>
+                            <span class="code-string">"Aditya Bagdwal"</span><span class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;<span class="code-keyword">role</span><span class="code-punctuation">:</span>
+                            <span class="code-string">"CS Student &amp; Freelancer"</span><span
+                                class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;<span class="code-keyword">education</span><span
+                                class="code-punctuation">:</span> <span class="code-string">"B.Tech in Computer
+                                Science"</span><span class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;<span class="code-keyword">passions</span><span
+                                class="code-punctuation">:</span> <span class="code-bracket">[</span><br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Continuous Learning"</span><span
+                                class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Problem Solving"</span><span
+                                class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Web Development"</span><span
+                                class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-string">"Open Source"</span><br>
+                            &nbsp;&nbsp;<span class="code-bracket">]</span><span class="code-punctuation">,</span><br>
+                            &nbsp;&nbsp;<span class="code-keyword">hireable</span><span
+                                class="code-punctuation">:</span> <span class="code-boolean">true</span><br>
+                            <span class="code-bracket">}</span><span class="code-punctuation">;</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ═══════════════ FOOTER ═══════════════ -->
-    <footer class="footer">
-        <div class="container">
-            <p class="footer__text">
-                Designed & built by <span class="footer__accent">Aditya Bagdwal</span> · © 2026 · All rights reserved
-            </p>
-        </div>
-    </footer>
+        <!-- ═══════════════ SKILLS SECTION ═══════════════ -->
+        <section class="section" id="skills">
+            <div class="container">
+                <div class="section__header reveal">
+                    <div class="section__index">02 // SKILLS</div>
+                    <h2 class="section__title">Technologies &amp; Tools</h2>
+                    <p class="section__desc">The core languages, frameworks, and modern tools I leverage to engineer
+                        responsive, performant applications.</p>
+                </div>
+                <div class="skills__layout">
+                    <div class="skills__cards">
+                        <div class="skill-card reveal" id="skill-frontend">
+                            <div class="skill-card__title">Frontend Development</div>
+                            <div class="skill-card__desc">Building clean, performant, and accessible interfaces with
+                                modern responsive frameworks.</div>
+                            <div class="skill-card__tags">
+                                <span class="skill-tag">React</span>
+                                <span class="skill-tag">Next.js</span>
+                                <span class="skill-tag">TypeScript</span>
+                                <span class="skill-tag">Tailwind CSS</span>
+                            </div>
+                        </div>
+                        <div class="skill-card reveal reveal-delay-1" id="skill-backend">
+                            <div class="skill-card__title">Backend Development</div>
+                            <div class="skill-card__desc">Designing scalable APIs, microservices, database schemas, and
+                                robust data pipelines.</div>
+                            <div class="skill-card__tags">
+                                <span class="skill-tag">Node.js</span>
+                                <span class="skill-tag">Python</span>
+                                <span class="skill-tag">Go</span>
+                                <span class="skill-tag">PostgreSQL</span>
+                            </div>
+                        </div>
+                    </div>
 
-    <!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+                    <!-- Developer Animation Visual Card -->
+                    <div class="skills__visual reveal reveal-delay-2" id="skillVisual">
+                        <div class="skills__visual-card">
+                            <img src="https://cdn.dribbble.com/userupload/23767519/file/original-77c50c1cc3f9e2d5d0832fddd9616a11.gif"
+                                alt="Developers animation" class="skills__gif" referrerpolicy="no-referrer"
+                                loading="lazy">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ PROJECTS SECTION ═══════════════ -->
+        <section class="section" id="projects">
+            <div class="container">
+                <div class="section__header reveal">
+                    <div class="section__index">03 // PROJECTS</div>
+                    <h2 class="section__title">Featured Works</h2>
+                    <p class="section__desc">Selected software builds, full-stack applications, and algorithmic
+                        implementations.</p>
+                </div>
+                <div class="projects__grid">
+                    <!-- Projects list container ready for featured works -->
+                    <div class="skill-card reveal" style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 2rem;">
+                        <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-white);">Curating
+                            Featured Projects</h3>
+                        <p style="color: var(--text-silver); font-size: 0.95rem; max-width: 500px; margin: 0 auto;">
+                            Exciting full-stack applications and open-source contributions are currently being added.
+                            Check my GitHub repository for active code!
+                        </p>
+                        <a href="https://github.com/Aditya17-debug" target="_blank" rel="noopener noreferrer"
+                            class="btn btn--ghost" style="margin-top: 1.5rem;">
+                            <span>Visit GitHub Profile</span>
+                            <span>↗</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ CONTACT SECTION ═══════════════ -->
+        <section class="section" id="contact">
+            <div class="container">
+                <div class="contact__layout">
+                    <!-- Left Column: Editorial Heading -->
+                    <div class="contact__info reveal">
+                        <div class="section__index">04 // CONTACT</div>
+                        <h2 class="contact__heading">
+                            Let's build something<br>
+                            <span class="contact__heading-accent">great together</span>.
+                        </h2>
+                        <p class="contact__desc">
+                            I'm always open to discussing new engineering projects, freelance opportunities, or tech
+                            collaborations. Feel free to send a direct message or connect on socials!
+                        </p>
+                    </div>
+
+                    <!-- Right Column: Direct Note Form -->
+                    <div class="contact__content reveal reveal-delay-1">
+                        <div class="contact__form-card">
+                            <div class="contact__form-header">
+                                <div class="contact__form-badge">
+                                    <span class="contact__form-badge-dot"></span>
+                                    Direct Inquiry
+                                </div>
+                                <h3 class="contact__form-title">Send a Direct Note</h3>
+                                <p class="contact__form-subtitle">Have an opportunity or question? Send a message
+                                    straight to my inbox.</p>
+                            </div>
+                            <form class="contact__form" id="contactForm">
+                                <div class="contact__form-row">
+                                    <div class="contact__form-group">
+                                        <label for="contact-name" class="contact__form-label">NAME</label>
+                                        <input type="text" id="contact-name" name="name" class="contact__form-input"
+                                            placeholder="Your name" required>
+                                    </div>
+                                    <div class="contact__form-group">
+                                        <label for="contact-user-email" class="contact__form-label">EMAIL</label>
+                                        <input type="email" id="contact-user-email" name="email"
+                                            class="contact__form-input" placeholder="your.email@example.com" required>
+                                    </div>
+                                </div>
+                                <div class="contact__form-group">
+                                    <label for="contact-subject" class="contact__form-label">SUBJECT</label>
+                                    <input type="text" id="contact-subject" name="subject" class="contact__form-input"
+                                        placeholder="Project Collaboration / Opportunity" required>
+                                </div>
+                                <div class="contact__form-group">
+                                    <label for="contact-message" class="contact__form-label">MESSAGE</label>
+                                    <textarea id="contact-message" name="message" class="contact__form-textarea"
+                                        rows="4" placeholder="Write your message here..." required></textarea>
+                                </div>
+                                <div class="contact__form-footer">
+                                    <button type="submit" class="btn btn--primary contact__form-btn"
+                                        id="contactSubmitBtn">
+                                        <span>Send Message</span>
+                                        <span>↗</span>
+                                    </button>
+                                    <div class="contact__form-status" id="contactFormStatus" role="status"
+                                        aria-live="polite"></div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Direct Social Contact Cards -->
+                        <div class="contact__grid">
+                            <a href="https://github.com/Aditya17-debug" target="_blank" rel="noopener noreferrer"
+                                class="contact__card" id="contact-github">
+                                <span class="contact__card-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                        <path fill-rule="evenodd" clip-rule="evenodd"
+                                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                                    </svg>
+                                </span>
+                                <span>GitHub</span>
+                            </a>
+                            <a href="https://www.linkedin.com/in/aditya-bagdwal-a4a887376/" target="_blank"
+                                rel="noopener noreferrer" class="contact__card" id="contact-linkedin">
+                                <span class="contact__card-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                        <path
+                                            d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v5.759z" />
+                                    </svg>
+                                </span>
+                                <span>LinkedIn</span>
+                            </a>
+                            <a href="https://leetcode.com/u/bgd_codes/" target="_blank" rel="noopener noreferrer"
+                                class="contact__card" id="contact-leetcode">
+                                <span class="contact__card-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                        <path
+                                            d="m15.42 16.94-2.25 2.17a2.1 2.1 0 0 1-1.52.56 2.1 2.1 0 0 1-1.52-.56l-3.61-3.63a2.18 2.18 0 0 1-.58-1.55 2.07 2.07 0 0 1 .58-1.52l3.6-3.65a2.1 2.1 0 0 1 1.53-.54 2.08 2.08 0 0 1 1.52.55l2.25 2.17A1.14 1.14 0 0 0 17 9.33l-2.17-2.2a4.24 4.24 0 0 0-2-1.12l2.06-2.08a1.15 1.15 0 0 0-1.62-1.62l-8.43 8.42a4.48 4.48 0 0 0-1.24 3.2 4.57 4.57 0 0 0 1.24 3.23l3.63 3.63A4.38 4.38 0 0 0 11.66 22a4.45 4.45 0 0 0 3.2-1.25L17 18.56a1.14 1.14 0 0 0-1.61-1.62z" />
+                                        <path
+                                            d="M19.34 12.84h-8.45a1.12 1.12 0 0 0 0 2.24h8.45a1.12 1.12 0 0 0 0-2.24" />
+                                    </svg>
+                                </span>
+                                <span>LeetCode</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ FOOTER ═══════════════ -->
+        <footer class="footer">
+            <div class="container">
+                <p class="footer__text">
+                    Designed &amp; built by <span class="footer__accent">Aditya Bagdwal</span> · © 2026 · All rights
+                    reserved
+                </p>
+            </div>
+        </footer>
+
+    </div><!-- End main-wrapper -->
+
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
     <script>
-        // ───── Navbar scroll ─────
-        const navbar = document.getElementById('navbar');
-        window.addEventListener('scroll', () => {
-            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        // ───── Theme Toggle (Dark / Light) ─────
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeIcon = themeToggleBtn.querySelector('.theme-icon');
+        const sunIcon = `<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>`;
+        const moonIcon = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>`;
+
+        let isLight = false;
+        themeToggleBtn.addEventListener('click', () => {
+            isLight = !isLight;
+            document.body.classList.toggle('light-mode', isLight);
+            themeIcon.innerHTML = isLight ? sunIcon : moonIcon;
         });
 
-        // ───── Mobile toggle ─────
-        const navToggle = document.getElementById('navToggle');
-        const navLinks = document.getElementById('navLinks');
-        navToggle.addEventListener('click', () => navLinks.classList.toggle('open'));
-        navLinks.querySelectorAll('.nav__link, .nav__cta').forEach(link => {
-            link.addEventListener('click', () => navLinks.classList.remove('open'));
-        });
-
-        // ───── Scroll reveal ─────
+        // ───── Scroll Reveal ─────
         const revealEls = document.querySelectorAll('.reveal');
         const revealObs = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -343,61 +399,37 @@
                     revealObs.unobserve(entry.target);
                 }
             });
-        }, { threshold: 0.12, rootMargin: '0px 0px -50px 0px' });
+        }, { threshold: 0.12 });
         revealEls.forEach(el => revealObs.observe(el));
 
-        // ───── Cursor glow ─────
-        const glow = document.getElementById('cursorGlow');
-        let glowOn = false;
-        document.addEventListener('mousemove', (e) => {
-            if (!glowOn) { glow.style.opacity = '0.25'; glowOn = true; }
-            glow.style.left = e.clientX + 'px';
-            glow.style.top = e.clientY + 'px';
-        });
-        document.addEventListener('mouseleave', () => { glow.style.opacity = '0'; glowOn = false; });
+        // ───── Hide Mouse Indicator on Scroll ─────
+        const heroScroll = document.querySelector('.hero__scroll');
+        let hasScrolled = false;
 
-        // ───── Stat counter ─────
-        function animateCount(id, target, suffix = '+') {
-            const el = document.getElementById(id);
-            const dur = 2000;
-            const start = performance.now();
-            function tick(now) {
-                const t = Math.min((now - start) / dur, 1);
-                const ease = 1 - Math.pow(1 - t, 3);
-                el.textContent = Math.floor(ease * target) + suffix;
-                if (t < 1) requestAnimationFrame(tick);
+        window.addEventListener('scroll', () => {
+            if (!hasScrolled && window.scrollY > 10) {
+                hasScrolled = true;
+                if (heroScroll) heroScroll.classList.add('hidden');
             }
-            requestAnimationFrame(tick);
-        }
-        const statsObs = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    animateCount('stat-years', 0, '');
-                    animateCount('stat-projects', 0, '');
-                    animateCount('stat-clients', 0, '');
-                    statsObs.unobserve(entry.target);
+            if (hasScrolled && window.scrollY <= 10) {
+                hasScrolled = false;
+                if (heroScroll) heroScroll.classList.remove('hidden');
+            }
+        }, { passive: true });
+
+        // ───── Active Rail Link Highlight on Scroll ─────
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-rail__link');
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 150;
+                if (window.scrollY >= sectionTop) {
+                    current = section.getAttribute('id');
                 }
             });
-        }, { threshold: 0.4 });
-        statsObs.observe(document.querySelector('.hero__stats'));
-
-        // ───── Smooth scroll ─────
-        document.querySelectorAll('a[href^="#"]').forEach(a => {
-            a.addEventListener('click', function (e) {
-                e.preventDefault();
-                const tgt = document.querySelector(this.getAttribute('href'));
-                if (tgt) tgt.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-        });
-
-        // ───── Active nav link ─────
-        const sects = document.querySelectorAll('section[id]');
-        const navItems = document.querySelectorAll('.nav__link');
-        window.addEventListener('scroll', () => {
-            let cur = '';
-            sects.forEach(s => { if (window.scrollY >= s.offsetTop - 120) cur = s.id; });
-            navItems.forEach(l => {
-                l.style.color = l.getAttribute('href') === '#' + cur ? 'var(--ice)' : '';
+            navLinks.forEach(link => {
+                link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
             });
         });
 
@@ -408,9 +440,9 @@
                 const rect = codeCard.getBoundingClientRect();
                 const x = e.clientX - rect.left - rect.width / 2;
                 const y = e.clientY - rect.top - rect.height / 2;
-                const tiltX = (y / (rect.height / 2)) * -8;
-                const tiltY = (x / (rect.width / 2)) * 8;
-                codeCard.style.transform = `perspective(1000px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-8px) scale(1.015)`;
+                const tiltX = (y / (rect.height / 2)) * -6;
+                const tiltY = (x / (rect.width / 2)) * 6;
+                codeCard.style.transform = `perspective(1000px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-6px)`;
             });
             codeCard.addEventListener('mouseleave', () => {
                 codeCard.style.transform = '';
@@ -444,7 +476,7 @@
             });
         }
 
-        // ───── Direct Contact Form Submission ─────
+        // ───── Direct Contact Form Submission (FormSubmit) ─────
         const contactForm = document.getElementById('contactForm');
         const contactSubmitBtn = document.getElementById('contactSubmitBtn');
         const contactFormStatus = document.getElementById('contactFormStatus');
@@ -452,11 +484,10 @@
         if (contactForm) {
             contactForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const btnText = contactSubmitBtn.querySelector('.btn-text');
-                const origText = btnText.textContent;
+                const origBtnContent = contactSubmitBtn.innerHTML;
 
                 contactSubmitBtn.disabled = true;
-                btnText.textContent = 'Sending...';
+                contactSubmitBtn.innerHTML = '<span>Sending...</span>';
                 contactFormStatus.className = 'contact__form-status';
                 contactFormStatus.textContent = '';
 
@@ -479,18 +510,18 @@
                     });
 
                     if (response.ok) {
-                        contactFormStatus.textContent = '✓ Thank you! Your message has been sent successfully.';
+                        contactFormStatus.textContent = '✓ Message delivered successfully!';
                         contactFormStatus.classList.add('success');
                         contactForm.reset();
                     } else {
                         throw new Error('Form submission failed');
                     }
                 } catch (err) {
-                    contactFormStatus.textContent = 'Unable to send message directly right now. Please connect via LinkedIn or GitHub!';
+                    contactFormStatus.textContent = 'Unable to send message directly. Please connect via LinkedIn or GitHub!';
                     contactFormStatus.classList.add('error');
                 } finally {
                     contactSubmitBtn.disabled = false;
-                    btnText.textContent = origText;
+                    contactSubmitBtn.innerHTML = origBtnContent;
                 }
             });
         }
