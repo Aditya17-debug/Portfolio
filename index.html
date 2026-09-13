@@ -487,7 +487,8 @@
             });
         }
 
-        // ───── Direct Contact Form Submission (FormSubmit) ─────
+        // ───── Contact Form Submission (Custom Express Backend) ─────
+        const BACKEND_API_URL = 'http://localhost:5000/api/contact';
         const contactForm = document.getElementById('contactForm');
         const contactSubmitBtn = document.getElementById('contactSubmitBtn');
         const contactFormStatus = document.getElementById('contactFormStatus');
@@ -502,36 +503,39 @@
                 contactFormStatus.className = 'contact__form-status';
                 contactFormStatus.textContent = '';
 
-                const formData = {
+                const payload = {
                     name: document.getElementById('contact-name').value.trim(),
                     email: document.getElementById('contact-user-email').value.trim(),
-                    _subject: document.getElementById('contact-subject').value.trim() || 'New Portfolio Message from ' + document.getElementById('contact-name').value.trim(),
-                    message: document.getElementById('contact-message').value.trim(),
-                    _captcha: 'false'
+                    subject: document.getElementById('contact-subject').value.trim() || 'Portfolio Inquiry',
+                    message: document.getElementById('contact-message').value.trim()
                 };
 
                 try {
-                    const response = await fetch('https://formsubmit.co/ajax/bagdwaladitya17@gmail.com', {
+                    const response = await fetch(BACKEND_API_URL, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
+                            'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify(formData)
+                        body: JSON.stringify(payload)
                     });
 
-                    if (response.ok) {
-                        contactFormStatus.textContent = '✓ Message delivered successfully!';
+                    const data = await response.json().catch(() => ({}));
+
+                    if (response.ok && data.success) {
+                        contactFormStatus.textContent = '✓ Message delivered and saved successfully!';
                         contactFormStatus.classList.add('success');
                         contactForm.reset();
                     } else {
-                        throw new Error('Form submission failed');
+                        throw new Error(data.error || 'Form submission failed');
                     }
                 } catch (err) {
-                    contactFormStatus.textContent = 'Unable to send message directly. Please connect via LinkedIn or GitHub!';
+                    console.error('Contact Form Error:', err);
+                    contactFormStatus.textContent = (err.message && err.message.includes('Failed to fetch'))
+                        ? 'Backend server offline. Please start your backend or reach out via LinkedIn!'
+                        : (err.message || 'Unable to send message directly. Please connect via LinkedIn or GitHub!');
                     contactFormStatus.classList.add('error');
                 } finally {
-                    contactSubmitBtn.diProject section changesabled = false;
+                    contactSubmitBtn.disabled = false;
                     contactSubmitBtn.innerHTML = origBtnContent;
                 }
             });
