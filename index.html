@@ -90,13 +90,10 @@
                 </div>
             </div>
 
-            <!-- Hero Ambient Glowing Morphing Blob -->
+            <!-- Hero Ambient 3D Complex Morphing Blob -->
             <div class="hero__blob-wrapper" id="heroBlobWrapper" aria-hidden="true">
                 <div class="hero__blob-glow"></div>
-                <div class="hero__blob-primary">
-                    <div class="hero__blob-inner"></div>
-                </div>
-                <div class="hero__blob-secondary"></div>
+                <canvas id="heroBlobCanvas" class="hero__blob-canvas"></canvas>
             </div>
 
             <!-- Scroll Indicator -->
@@ -375,6 +372,9 @@
 
     </div><!-- End main-wrapper -->
 
+    <!-- ═══════════════ THREE.JS (3D WEBGL GRAPHICS) ═══════════════ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <!-- ═══════════════ SUPABASE CLOUD DATABASE SDK ═══════════════ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -420,23 +420,208 @@
         }, { threshold: 0.12 });
         revealEls.forEach(el => revealObs.observe(el));
 
-        // ───── Interactive Hero Blob Parallax ─────
-        const heroSection = document.getElementById('hero');
-        const heroBlob = document.getElementById('heroBlobWrapper');
-        if (heroSection && heroBlob) {
-            heroSection.addEventListener('mousemove', (e) => {
-                const rect = heroSection.getBoundingClientRect();
-                const x = (e.clientX - rect.left) / rect.width - 0.5;
-                const y = (e.clientY - rect.top) / rect.height - 0.5;
-                heroBlob.style.transform = `translate(${x * 32}px, calc(-50% + ${y * 32}px))`;
+        // ───── Complex 3D Organic WebGL Blob (Three.js) ─────
+        function init3DBlob() {
+            const canvas = document.getElementById('heroBlobCanvas');
+            const wrapper = document.getElementById('heroBlobWrapper');
+            if (!canvas || !wrapper || typeof THREE === 'undefined') return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+            camera.position.z = 6.2;
+
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                alpha: true,
+                antialias: true,
+                powerPreference: 'high-performance'
             });
-            heroSection.addEventListener('mouseleave', () => {
-                heroBlob.style.transform = 'translate(0px, -50%)';
-                heroBlob.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            function handleResize() {
+                const width = wrapper.clientWidth || 460;
+                const height = wrapper.clientHeight || 460;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height, false);
+            }
+            handleResize();
+            window.addEventListener('resize', handleResize);
+
+            // 1. Core 3D Organic Deformable Mesh
+            const detail = window.innerWidth < 768 ? 32 : 48;
+            const geometry = new THREE.IcosahedronGeometry(1.68, detail);
+            const posAttr = geometry.attributes.position;
+            const origPos = new Float32Array(posAttr.array);
+
+            const material = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color('#943b5e'),
+                emissive: new THREE.Color('#381228'),
+                emissiveIntensity: 0.38,
+                roughness: 0.16,
+                metalness: 0.28,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.12,
+                reflectivity: 0.88,
+                flatShading: false
             });
-            heroSection.addEventListener('mouseenter', () => {
-                heroBlob.style.transition = 'transform 0.15s ease-out';
+            const blobMesh = new THREE.Mesh(geometry, material);
+            scene.add(blobMesh);
+
+            // 2. Inner Glowing Wireframe Core (Engineering Heart)
+            const innerGeo = new THREE.IcosahedronGeometry(1.18, 12);
+            const innerMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('#e0628e'),
+                wireframe: true,
+                transparent: true,
+                opacity: 0.26
             });
+            const innerCore = new THREE.Mesh(innerGeo, innerMat);
+            blobMesh.add(innerCore);
+
+            // 3. Intricate Orbiting Gyroscope Halo Rings
+            const ringGeo1 = new THREE.TorusGeometry(2.38, 0.016, 16, 120);
+            const ringMat1 = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('#ff7da8'),
+                transparent: true,
+                opacity: 0.45
+            });
+            const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+            ring1.rotation.x = Math.PI / 3;
+            ring1.rotation.y = Math.PI / 6;
+            scene.add(ring1);
+
+            const ringGeo2 = new THREE.TorusGeometry(2.58, 0.012, 16, 120);
+            const ringMat2 = new THREE.MeshBasicMaterial({
+                color: new THREE.Color('#ffffff'),
+                transparent: true,
+                opacity: 0.25
+            });
+            const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+            ring2.rotation.x = -Math.PI / 4;
+            ring2.rotation.z = Math.PI / 4;
+            scene.add(ring2);
+
+            // 4. Orbiting Nano Light Particles
+            const particleCount = 40;
+            const particleGeo = new THREE.BufferGeometry();
+            const pPositions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                const r = 2.45 + Math.random() * 0.8;
+                pPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                pPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                pPositions[i * 3 + 2] = r * Math.cos(phi);
+            }
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+            const particleMat = new THREE.PointsMaterial({
+                color: new THREE.Color('#ff85ad'),
+                size: 0.055,
+                transparent: true,
+                opacity: 0.85
+            });
+            const particles = new THREE.Points(particleGeo, particleMat);
+            scene.add(particles);
+
+            // 5. Studio Multi-Point Lighting
+            const keyLight = new THREE.DirectionalLight('#ff70a0', 2.2);
+            keyLight.position.set(4, 5, 4);
+            scene.add(keyLight);
+
+            const rimLight = new THREE.DirectionalLight('#542247', 1.8);
+            rimLight.position.set(-5, -3, 2);
+            scene.add(rimLight);
+
+            const specularLight = new THREE.PointLight('#ffffff', 1.4, 12);
+            specularLight.position.set(0, 4, 3);
+            scene.add(specularLight);
+
+            const ambientLight = new THREE.AmbientLight('#2a1221', 1.2);
+            scene.add(ambientLight);
+
+            // 6. Interactive Mouse Physics & 3D Deform Loop
+            let targetRotX = 0, targetRotY = 0;
+            let currentRotX = 0, currentRotY = 0;
+            let isVisible = true;
+
+            const observer = new IntersectionObserver((entries) => {
+                isVisible = entries[0].isIntersecting;
+            }, { threshold: 0.05 });
+            observer.observe(wrapper);
+
+            window.addEventListener('mousemove', (e) => {
+                const nx = (e.clientX / window.innerWidth) * 2 - 1;
+                const ny = -(e.clientY / window.innerHeight) * 2 + 1;
+                targetRotY = nx * 0.65;
+                targetRotX = -ny * 0.5;
+            }, { passive: true });
+
+            // Harmonic 3D Organic Noise Function
+            function get3DNoise(x, y, z, t) {
+                return Math.sin(x * 1.6 + t) * Math.cos(y * 1.8 + t * 0.9) * Math.sin(z * 1.5 + t * 1.1)
+                     + Math.sin(x * 2.8 - t * 1.2) * Math.cos(z * 2.6 + t) * 0.38
+                     + Math.cos(y * 4.0 + t * 1.5) * 0.16;
+            }
+
+            const clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (!isVisible) return;
+
+                const time = clock.getElapsedTime() * 0.8;
+
+                // Smooth rotation damping
+                currentRotX += (targetRotX - currentRotX) * 0.045;
+                currentRotY += (targetRotY - currentRotY) * 0.045;
+
+                blobMesh.rotation.x = currentRotX + time * 0.15;
+                blobMesh.rotation.y = currentRotY + time * 0.22;
+
+                ring1.rotation.z += 0.007;
+                ring1.rotation.y += 0.004;
+                ring2.rotation.x += 0.005;
+                ring2.rotation.z -= 0.006;
+
+                particles.rotation.y -= 0.003;
+
+                // Dynamic 3D Vertex Displacements
+                const positions = posAttr.array;
+                const count = posAttr.count;
+
+                for (let i = 0; i < count; i++) {
+                    const idx = i * 3;
+                    const ox = origPos[idx];
+                    const oy = origPos[idx + 1];
+                    const oz = origPos[idx + 2];
+
+                    const len = Math.sqrt(ox * ox + oy * oy + oz * oz);
+                    const nx = ox / len;
+                    const ny = oy / len;
+                    const nz = oz / len;
+
+                    const displacement = 1 + get3DNoise(nx * 2.1, ny * 2.1, nz * 2.1, time) * 0.33;
+
+                    positions[idx] = ox * displacement;
+                    positions[idx + 1] = oy * displacement;
+                    positions[idx + 2] = oz * displacement;
+                }
+
+                posAttr.needsUpdate = true;
+                geometry.computeVertexNormals();
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+        }
+
+        // Initialize 3D Blob when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init3DBlob);
+        } else {
+            init3DBlob();
         }
 
         // ───── Hide Mouse Indicator on Scroll ─────
