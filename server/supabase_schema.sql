@@ -17,16 +17,16 @@ create table if not exists public.messages (
 -- 2. Enable Row Level Security (RLS)
 alter table public.messages enable row level security;
 
--- 3. Policy: Allow incoming contact submissions from anyone (anon or backend)
-create policy "Allow insert access for all"
+-- 3. Policy: Allow incoming contact submissions from anyone (public anon visitors)
+-- Visitors can ONLY INSERT (send messages). They CANNOT read or edit any records.
+drop policy if exists "Allow insert access for all" on public.messages;
+drop policy if exists "Allow read access" on public.messages;
+drop policy if exists "Allow update access" on public.messages;
+
+create policy "Allow insert only for public"
 on public.messages for insert
 with check (true);
 
--- 4. Policy: Allow reading and updating messages for dashboard / service role / anon
-create policy "Allow read access"
-on public.messages for select
-using (true);
-
-create policy "Allow update access"
-on public.messages for update
-using (true);
+-- Note: No SELECT or UPDATE policy is created for anon.
+-- Only you (logged into your Supabase Dashboard or using the secret Service Role key)
+-- can read or manage these messages.
