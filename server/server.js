@@ -135,14 +135,15 @@ app.get('/api/messages', async (req, res) => {
             });
         }
 
-        const messages = await getAllMessages();
-        const unreadCount = messages.filter(m => m.status === 'unread').length;
+        const { source, messages } = await getAllMessages();
+        const unreadCount = (messages || []).filter(m => m.status === 'unread').length;
 
         res.json({
             success: true,
-            total: messages.length,
+            storageEngine: source,
+            total: (messages || []).length,
             unreadCount,
-            messages
+            messages: messages || []
         });
     } catch (err) {
         console.error('❌ Error fetching messages:', err);
