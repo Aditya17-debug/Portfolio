@@ -435,7 +435,7 @@ img { max-width: 100%; display: block; }
     display: block;
     pointer-events: auto;
     cursor: grab;
-    filter: drop-shadow(0 25px 60px rgba(180, 85, 40, 0.45));
+    filter: drop-shadow(0 20px 55px rgba(133, 57, 83, 0.55));
 }
 .hero__blob-canvas:active {
     cursor: grabbing;
@@ -445,11 +445,15 @@ img { max-width: 100%; display: block; }
 .hero__blob-glow {
     position: absolute;
     inset: -10%;
-    background: radial-gradient(circle at 50% 50%, rgba(210, 100, 50, 0.40) 0%, rgba(180, 75, 35, 0.25) 45%, rgba(140, 60, 25, 0.10) 70%, transparent 85%);
-    filter: blur(75px);
+    background: radial-gradient(circle at 50% 50%,
+        rgba(133, 57, 83, 0.50) 0%,
+        rgba(97, 45, 83, 0.30) 42%,
+        rgba(44, 44, 44, 0.10) 70%,
+        transparent 88%);
+    filter: blur(70px);
     border-radius: 50%;
-    animation: blobGlowPulse 6s ease-in-out infinite alternate;
-    opacity: 0.82;
+    animation: blobGlowPulse 7s ease-in-out infinite alternate;
+    opacity: 0.88;
     pointer-events: none;
     z-index: 1;
 }
@@ -490,7 +494,10 @@ img { max-width: 100%; display: block; }
 
 /* Light Mode Overrides */
 body.light-mode .hero__blob-glow {
-    background: radial-gradient(circle at 50% 50%, rgba(210, 100, 50, 0.30) 0%, rgba(180, 75, 35, 0.15) 50%, transparent 75%);
+    background: radial-gradient(circle at 50% 50%,
+        rgba(133, 57, 83, 0.35) 0%,
+        rgba(97, 45, 83, 0.18) 50%,
+        transparent 78%);
 }
 
 /* Minimalist Mouse Scroll Indicator */

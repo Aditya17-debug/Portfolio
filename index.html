@@ -449,20 +449,20 @@
             window.addEventListener('resize', handleResize);
 
             // 1. Core 3D Organic Deformable Mesh
-            const detail = window.innerWidth < 768 ? 32 : 48;
+            const detail = window.innerWidth < 768 ? 48 : 72;
             const geometry = new THREE.IcosahedronGeometry(1.68, detail);
             const posAttr = geometry.attributes.position;
             const origPos = new Float32Array(posAttr.array);
 
             const material = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#c0673a'),
-                emissive: new THREE.Color('#5c2510'),
-                emissiveIntensity: 0.32,
-                roughness: 0.22,
-                metalness: 0.18,
-                clearcoat: 0.85,
-                clearcoatRoughness: 0.18,
-                reflectivity: 0.72,
+                color: new THREE.Color('#853953'),
+                emissive: new THREE.Color('#2a0f1c'),
+                emissiveIntensity: 0.28,
+                roughness: 0.08,
+                metalness: 0.12,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.06,
+                reflectivity: 0.9,
                 flatShading: false
             });
             const blobMesh = new THREE.Mesh(geometry, material);
@@ -471,31 +471,31 @@
             // 2. Inner Glowing Wireframe Core (Engineering Heart)
             const innerGeo = new THREE.IcosahedronGeometry(1.18, 12);
             const innerMat = new THREE.MeshBasicMaterial({
-                color: new THREE.Color('#f0a060'),
+                color: new THREE.Color('#c46b8a'),
                 wireframe: true,
                 transparent: true,
-                opacity: 0.22
+                opacity: 0.18
             });
             const innerCore = new THREE.Mesh(innerGeo, innerMat);
             blobMesh.add(innerCore);
 
             // 3. Intricate Orbiting Gyroscope Halo Rings
-            const ringGeo1 = new THREE.TorusGeometry(2.38, 0.016, 16, 120);
+            const ringGeo1 = new THREE.TorusGeometry(2.38, 0.014, 16, 140);
             const ringMat1 = new THREE.MeshBasicMaterial({
-                color: new THREE.Color('#e8906a'),
+                color: new THREE.Color('#853953'),
                 transparent: true,
-                opacity: 0.38
+                opacity: 0.30
             });
             const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
             ring1.rotation.x = Math.PI / 3;
             ring1.rotation.y = Math.PI / 6;
             scene.add(ring1);
 
-            const ringGeo2 = new THREE.TorusGeometry(2.58, 0.012, 16, 120);
+            const ringGeo2 = new THREE.TorusGeometry(2.62, 0.010, 16, 140);
             const ringMat2 = new THREE.MeshBasicMaterial({
-                color: new THREE.Color('#f5c898'),
+                color: new THREE.Color('#f3f4f4'),
                 transparent: true,
-                opacity: 0.20
+                opacity: 0.12
             });
             const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
             ring2.rotation.x = -Math.PI / 4;
@@ -516,28 +516,32 @@
             }
             particleGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
             const particleMat = new THREE.PointsMaterial({
-                color: new THREE.Color('#f5b97a'),
-                size: 0.05,
+                color: new THREE.Color('#c5b8c1'),
+                size: 0.042,
                 transparent: true,
-                opacity: 0.72
+                opacity: 0.60
             });
             const particles = new THREE.Points(particleGeo, particleMat);
             scene.add(particles);
 
-            // 5. Studio Multi-Point Lighting
-            const keyLight = new THREE.DirectionalLight('#ffcf8a', 2.0);
+            // 5. Studio Multi-Point Lighting — Site Palette (#853953 Rosewood)
+            const keyLight = new THREE.DirectionalLight('#d97aa0', 1.8);
             keyLight.position.set(4, 5, 4);
             scene.add(keyLight);
 
-            const rimLight = new THREE.DirectionalLight('#8b3a1a', 1.4);
+            const rimLight = new THREE.DirectionalLight('#612D53', 1.6);
             rimLight.position.set(-5, -3, 2);
             scene.add(rimLight);
 
-            const specularLight = new THREE.PointLight('#ffe0b0', 1.1, 12);
-            specularLight.position.set(0, 4, 3);
+            const specularLight = new THREE.PointLight('#f3f4f4', 0.9, 12);
+            specularLight.position.set(1, 4, 3);
             scene.add(specularLight);
 
-            const ambientLight = new THREE.AmbientLight('#3a1c10', 1.4);
+            const fillLight = new THREE.PointLight('#853953', 1.2, 8);
+            fillLight.position.set(-2, -2, 4);
+            scene.add(fillLight);
+
+            const ambientLight = new THREE.AmbientLight('#1a0a12', 1.6);
             scene.add(ambientLight);
 
             // 6. Interactive Mouse Physics & 3D Deform Loop
@@ -559,9 +563,9 @@
 
             // Harmonic 3D Organic Noise Function
             function get3DNoise(x, y, z, t) {
-                return Math.sin(x * 1.6 + t) * Math.cos(y * 1.8 + t * 0.9) * Math.sin(z * 1.5 + t * 1.1)
-                     + Math.sin(x * 2.8 - t * 1.2) * Math.cos(z * 2.6 + t) * 0.38
-                     + Math.cos(y * 4.0 + t * 1.5) * 0.16;
+                return Math.sin(x * 1.1 + t) * Math.cos(y * 1.2 + t * 0.8) * Math.sin(z * 1.0 + t * 0.9)
+                     + Math.sin(x * 1.9 - t * 0.9) * Math.cos(z * 1.7 + t) * 0.28
+                     + Math.cos(y * 2.6 + t * 1.1) * 0.10;
             }
 
             const clock = new THREE.Clock();
@@ -570,7 +574,7 @@
                 requestAnimationFrame(animate);
                 if (!isVisible) return;
 
-                const time = clock.getElapsedTime() * 0.8;
+                const time = clock.getElapsedTime() * 0.55;
 
                 // Smooth rotation damping
                 currentRotX += (targetRotX - currentRotX) * 0.045;
@@ -601,7 +605,7 @@
                     const ny = oy / len;
                     const nz = oz / len;
 
-                    const displacement = 1 + get3DNoise(nx * 2.1, ny * 2.1, nz * 2.1, time) * 0.33;
+                    const displacement = 1 + get3DNoise(nx * 1.8, ny * 1.8, nz * 1.8, time) * 0.18;
 
                     positions[idx] = ox * displacement;
                     positions[idx + 1] = oy * displacement;
