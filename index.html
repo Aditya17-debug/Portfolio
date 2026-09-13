@@ -560,6 +560,26 @@
                         throw new Error(error.message || 'Database insert failed.');
                     }
 
+                    // 2. Instant Email Notification to your inbox
+                    try {
+                        fetch('https://formsubmit.co/ajax/bagdwaladitya17@gmail.com', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                name: payload.name,
+                                email: payload.email,
+                                _subject: `[Portfolio Inquiry] ${payload.subject} (from ${payload.name})`,
+                                message: payload.message,
+                                _captcha: 'false'
+                            })
+                        }).catch(e => console.warn('Email notify error:', e));
+                    } catch (notifyErr) {
+                        console.warn('Email notify error:', notifyErr);
+                    }
+
                     // Success!
                     contactFormStatus.textContent = '✓ Message delivered and saved to Supabase!';
                     contactFormStatus.classList.add('success');
