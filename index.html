@@ -555,6 +555,260 @@
                 }
             });
         }
+
+        // ───── Dynamic Glowing Cursor Blob & Particle Swarm ─────
+        const canvas = document.createElement('canvas');
+        canvas.id = 'cursor-motes';
+        document.body.appendChild(canvas);
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '9998';
+        
+        // Ambient spotlight glow beneath the particles
+        const glow = document.createElement('div');
+        glow.style.position = 'fixed';
+        glow.style.top = '0';
+        glow.style.left = '0';
+        glow.style.borderRadius = '50%';
+        glow.style.pointerEvents = 'none';
+        glow.style.zIndex = '9997';
+        glow.style.transform = 'translate(-50%, -50%)';
+        glow.style.filter = 'blur(55px)';
+        glow.style.transition = 'width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out';
+        glow.style.opacity = '0.22';
+        document.body.appendChild(glow);
+
+        const ctx = canvas.getContext('2d');
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let dpr = window.devicePixelRatio || 1;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.scale(dpr, dpr);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        let targetX = width / 2;
+        let targetY = height / 2;
+        let currentX = targetX;
+        let currentY = targetY;
+        let prevTargetX = targetX;
+        let prevTargetY = targetY;
+        let mouseSpeed = 0;
+        let activity = 0; // 0 = fully regrouped idle, 1 = dispersed & hovering
+        let lastMoveTime = performance.now();
+
+        function onPointerMove(clientX, clientY) {
+            targetX = clientX;
+            targetY = clientY;
+            lastMoveTime = performance.now();
+        }
+
+        window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches.length > 0) {
+                onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        function randomGaussian() {
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+
+        const PARTICLE_COUNT = 95;
+        const particles = [];
+
+        // Palette presets based on site branding (#853953, #612D53, #F3F4F4, #2C2C2C)
+        // 0: Primary Rosewood, 1: Vibrant Rose/Mulberry, 2: Deep Plum, 3: Spark/Contrast
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const g1 = Math.abs(randomGaussian());
+            const g2 = Math.abs(randomGaussian());
+            
+            // Regrouped state: distinct horizontal oval (width: ~10px-44px, height: ~4px-18px)
+            const regroupRadiusX = g1 * 26 + 8;
+            const regroupRadiusY = regroupRadiusX * 0.42;
+
+            // Dispersed state: wide horizontal oval swarm around cursor
+            const disperseRadiusX = g2 * 75 + 45;
+            const disperseRadiusY = disperseRadiusX * 0.45;
+            
+            const angle = Math.random() * Math.PI * 2;
+
+            // Palette type distribution: 50% Rosewood, 25% Vibrant Rose, 15% Deep Plum, 10% Highlight Spark
+            const randType = Math.random();
+            const colorType = randType < 0.50 ? 0 : (randType < 0.75 ? 1 : (randType < 0.90 ? 2 : 3));
+
+            particles.push({
+                regroupRadiusX,
+                regroupRadiusY,
+                disperseRadiusX,
+                disperseRadiusY,
+                angle,
+                colorType,
+                orbitSpeed: (Math.random() - 0.5) * 0.014,
+                hoverFreq: 1.0 + Math.random() * 1.8,
+                hoverAmp: 10 + Math.random() * 16,
+                phase: Math.random() * Math.PI * 2,
+                size: Math.random() * 0.9 + 0.9, // Small, delicate particle sizes (0.9px - 1.8px)
+                baseAlpha: Math.random() * 0.45 + 0.55,
+                lag: 0.015 + Math.random() * 0.045,
+                ease: 0.075 + Math.random() * 0.045,
+                x: Math.cos(angle) * regroupRadiusX,
+                y: Math.sin(angle) * regroupRadiusY
+            });
+        }
+
+        function animate() {
+            const now = performance.now();
+            const time = now * 0.001;
+
+            // Compute mouse velocity
+            const deltaDist = Math.hypot(targetX - prevTargetX, targetY - prevTargetY);
+            prevTargetX = targetX;
+            prevTargetY = targetY;
+
+            // Instant speed smoothed
+            mouseSpeed += (deltaDist - mouseSpeed) * 0.25;
+
+            // Idle detection: if no movement for > 140ms or speed is negligible, ease to regroup
+            const isIdle = (now - lastMoveTime > 140) || (mouseSpeed < 0.6);
+            const targetActivity = isIdle ? 0 : Math.min(1.0, mouseSpeed / 10);
+            
+            // Responsive expansion on move, smooth graceful regrouping on idle
+            const easeRate = targetActivity > activity ? 0.14 : 0.042;
+            activity += (targetActivity - activity) * easeRate;
+
+            // Smooth cursor center follow with fluid inertia
+            currentX += (targetX - currentX) * 0.13;
+            currentY += (targetY - currentY) * 0.13;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            const isLight = document.body.classList.contains('light-mode');
+
+            // Website Palette mapping
+            const palette = isLight ? [
+                '133, 57, 83',   // #853953 Rosewood
+                '160, 61, 99',   // #A03D63 Wine Rose
+                '97, 45, 83',    // #612D53 Deep Plum
+                '44, 44, 44'     // #2C2C2C Charcoal
+            ] : [
+                '133, 57, 83',   // #853953 Rosewood
+                '184, 74, 115',  // #B84A73 Radiant Rose
+                '120, 52, 95',   // #78345F Plum Tint
+                '243, 244, 244'  // #F3F4F4 Ice White highlight
+            ];
+
+            const glowShadowColor = isLight ? 'rgba(133, 57, 83, 0.6)' : 'rgba(184, 74, 115, 0.85)';
+
+            // Synchronize background spotlight glow in matching oval dimensions
+            glow.style.left = `${currentX}px`;
+            glow.style.top = `${currentY}px`;
+            const glowWidth = Math.round(220 + activity * 160);
+            const glowHeight = Math.round(glowWidth * 0.48);
+            glow.style.width = `${glowWidth}px`;
+            glow.style.height = `${glowHeight}px`;
+            
+            if (isLight) {
+                glow.style.background = 'radial-gradient(ellipse, rgba(133, 57, 83, 0.25) 0%, rgba(97, 45, 83, 0.1) 50%, transparent 70%)';
+                glow.style.opacity = (0.32 + (1 - activity) * 0.18).toFixed(2);
+            } else {
+                glow.style.background = 'radial-gradient(ellipse, rgba(133, 57, 83, 0.42) 0%, rgba(97, 45, 83, 0.24) 45%, transparent 70%)';
+                glow.style.opacity = (0.42 + (1 - activity) * 0.2).toFixed(2);
+            }
+
+            // Inertial vector of the cursor
+            const trailDx = targetX - currentX;
+            const trailDy = targetY - currentY;
+
+            ctx.save();
+            ctx.translate(currentX, currentY);
+
+            // Update particle physics with oval arrangement
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const p = particles[i];
+
+                // Orbital progression: gentle swirl when idle, energetic swirl when moving
+                p.angle += p.orbitSpeed * (1 + activity * 2.8);
+
+                // Smooth radius interpolation between regrouped core and dispersed swarm
+                const baseRx = p.regroupRadiusX * (1 - activity) + p.disperseRadiusX * activity;
+                const baseRy = p.regroupRadiusY * (1 - activity) + p.disperseRadiusY * activity;
+                
+                // Organic breathing pulse when regrouped
+                const breathing = Math.sin(time * 2.2 + p.phase) * (1 - activity) * 2.5;
+                
+                // Floating hover oscillation around cursor when moving
+                const hoverX = Math.cos(time * p.hoverFreq + p.phase) * (p.hoverAmp * activity + Math.sin(p.phase) * 2.2);
+                const hoverY = Math.sin(time * (p.hoverFreq * 1.1) + p.phase) * (p.hoverAmp * 0.45 * activity + Math.cos(p.phase) * 1.5);
+
+                const currentRx = Math.max(3, baseRx + breathing);
+                const currentRy = Math.max(2, baseRy + breathing * 0.45);
+
+                // Target relative position in oval distribution
+                let destX = Math.cos(p.angle) * currentRx + hoverX;
+                let destY = Math.sin(p.angle) * currentRy + hoverY;
+
+                // Inertial trailing behind cursor movement when dispersed
+                destX -= trailDx * p.lag * activity * 1.6;
+                destY -= trailDy * p.lag * activity * 1.6;
+
+                // Particle spring/ease towards dynamic position
+                const currentEase = p.ease + (1 - activity) * 0.04;
+                p.x += (destX - p.x) * currentEase;
+                p.y += (destY - p.y) * currentEase;
+            }
+
+            // ── Pass 1: Glowing Halos ──
+            ctx.shadowBlur = isLight ? 5 : 8;
+            ctx.shadowColor = glowShadowColor;
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const p = particles[i];
+                const rgb = palette[p.colorType];
+                const alpha = (p.baseAlpha * 0.65).toFixed(3);
+                ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+
+                const renderSize = p.size * (1 + (1 - activity) * 0.15);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, renderSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // ── Pass 2: High-Luminance Crisp Cores ──
+            ctx.shadowBlur = 2;
+            ctx.shadowColor = glowShadowColor;
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const p = particles[i];
+                const rgb = palette[p.colorType];
+                const alpha = Math.min(1.0, p.baseAlpha * 1.15).toFixed(3);
+                ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+
+                const coreSize = p.size * 0.65;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, coreSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+            requestAnimationFrame(animate);
+        }
+        animate();
     </script>
 </body>
 
