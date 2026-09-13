@@ -90,6 +90,15 @@
                 </div>
             </div>
 
+            <!-- Hero Ambient Glowing Morphing Blob -->
+            <div class="hero__blob-wrapper" id="heroBlobWrapper" aria-hidden="true">
+                <div class="hero__blob-glow"></div>
+                <div class="hero__blob-primary">
+                    <div class="hero__blob-inner"></div>
+                </div>
+                <div class="hero__blob-secondary"></div>
+            </div>
+
             <!-- Scroll Indicator -->
             <div class="hero__scroll">
                 <div class="hero__mouse">
@@ -410,6 +419,25 @@
             });
         }, { threshold: 0.12 });
         revealEls.forEach(el => revealObs.observe(el));
+
+        // ───── Interactive Hero Blob Parallax ─────
+        const heroSection = document.getElementById('hero');
+        const heroBlob = document.getElementById('heroBlobWrapper');
+        if (heroSection && heroBlob) {
+            heroSection.addEventListener('mousemove', (e) => {
+                const rect = heroSection.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width - 0.5;
+                const y = (e.clientY - rect.top) / rect.height - 0.5;
+                heroBlob.style.transform = `translate(${x * 32}px, calc(-50% + ${y * 32}px))`;
+            });
+            heroSection.addEventListener('mouseleave', () => {
+                heroBlob.style.transform = 'translate(0px, -50%)';
+                heroBlob.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            });
+            heroSection.addEventListener('mouseenter', () => {
+                heroBlob.style.transition = 'transform 0.15s ease-out';
+            });
+        }
 
         // ───── Hide Mouse Indicator on Scroll ─────
         const heroScroll = document.querySelector('.hero__scroll');
