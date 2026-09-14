@@ -532,7 +532,7 @@
 
                     if (now - lastMoveTime > 150) {
                         rawCircling *= Math.exp(-8.0 * dt);
-                    }
+                    } 
 
                     const rate = Math.abs(rawCircling) > Math.abs(circlingIntensity) ? 9.0 : 4.5;
                     circlingIntensity += (rawCircling - circlingIntensity) * Math.min(1, rate * dt);
@@ -557,7 +557,7 @@
 
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-            camera.position.z = 6.2;
+            camera.position.z = 6.6;
 
             const renderer = new THREE.WebGLRenderer({
                 canvas: canvas,
@@ -607,9 +607,9 @@
             scene.background = null;
             pmrem.dispose();
 
-            // 1. Core 3D Organic Deformable Mesh (smooth high-density geometry without CPU spikes)
-            const detail = window.innerWidth < 768 ? 3 : 4;
-            const geometry = new THREE.IcosahedronGeometry(1.68, detail);
+            // 1. Core 3D Organic Deformable Mesh (compact scale, silky smooth 60-120fps morphing)
+            const detail = 3;
+            const geometry = new THREE.IcosahedronGeometry(1.30, detail);
             const posAttr = geometry.attributes.position;
             const origPos = new Float32Array(posAttr.array);
 
@@ -642,7 +642,7 @@
             scene.add(blobMesh);
 
             // 2. Outer Translucent Shell — depth & parallax
-            const shellGeo = new THREE.IcosahedronGeometry(1.96, 2);
+            const shellGeo = new THREE.IcosahedronGeometry(1.52, 2);
             const shellMat = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color('#612D53'),
                 roughness: 0.02,
@@ -661,7 +661,7 @@
             scene.add(shellMesh);
 
             // 3. Inner Glowing Wireframe Core (Engineering Heart)
-            const innerGeo = new THREE.IcosahedronGeometry(1.18, 2);
+            const innerGeo = new THREE.IcosahedronGeometry(0.92, 2);
             const innerMat = new THREE.MeshBasicMaterial({
                 color: new THREE.Color('#c46b8a'),
                 wireframe: true,
@@ -671,8 +671,8 @@
             const innerCore = new THREE.Mesh(innerGeo, innerMat);
             blobMesh.add(innerCore);
 
-            // 4. Orbiting Gyroscope Halo Rings
-            const ringGeo1 = new THREE.TorusGeometry(2.42, 0.013, 24, 180);
+            // 4. Orbiting Gyroscope Halo Rings (compact proportion)
+            const ringGeo1 = new THREE.TorusGeometry(1.88, 0.010, 24, 160);
             const ringMat1 = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color('#853953'),
                 emissive: new THREE.Color('#853953'),
@@ -688,7 +688,7 @@
             ring1.rotation.y = Math.PI / 6;
             scene.add(ring1);
 
-            const ringGeo2 = new THREE.TorusGeometry(2.68, 0.008, 24, 180);
+            const ringGeo2 = new THREE.TorusGeometry(2.10, 0.007, 24, 160);
             const ringMat2 = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color('#f3f4f4'),
                 roughness: 0.0,
@@ -702,7 +702,7 @@
             ring2.rotation.z = Math.PI / 4;
             scene.add(ring2);
 
-            const ringGeo3 = new THREE.TorusGeometry(2.20, 0.009, 24, 160);
+            const ringGeo3 = new THREE.TorusGeometry(1.72, 0.008, 24, 140);
             const ringMat3 = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color('#612D53'),
                 emissive: new THREE.Color('#612D53'),
@@ -718,7 +718,7 @@
             ring3.rotation.z = -Math.PI / 3;
             scene.add(ring3);
 
-            // 6. Orbiting Nano Particles (two tiers)
+            // 6. Orbiting Nano Particles (compact two tiers)
             function makeParticles(count, rMin, rMax, color, size, opacity) {
                 const geo = new THREE.BufferGeometry();
                 const pos = new Float32Array(count * 3);
@@ -734,8 +734,8 @@
                 const mat = new THREE.PointsMaterial({ color: new THREE.Color(color), size, transparent: true, opacity });
                 return new THREE.Points(geo, mat);
             }
-            const particles = makeParticles(55, 2.3, 3.2, '#c5b8c1', 0.040, 0.65);
-            const particles2 = makeParticles(30, 1.9, 2.2, '#d97aa0', 0.028, 0.45);
+            const particles = makeParticles(36, 1.8, 2.5, '#c5b8c1', 0.032, 0.65);
+            const particles2 = makeParticles(20, 1.5, 1.8, '#d97aa0', 0.024, 0.45);
             scene.add(particles);
             scene.add(particles2);
 
@@ -794,27 +794,13 @@
                 targetRotX = -ny * 0.42;
             }, { passive: true });
 
-            // ── 6-Octave Fractional Brownian Motion (fBm) — hyper-organic surface ──
-            function fBm(x, y, z, t) {
-                let v = 0.0, amp = 0.52, freq = 1.0;
-                // Octave 1 — broad primary wave
-                v += amp * Math.sin(x * freq * 1.10 + t) * Math.cos(y * freq * 1.20 + t * 0.78) * Math.sin(z * freq * 0.95 + t * 0.88);
-                amp *= 0.50; freq *= 2.05;
-                // Octave 2
-                v += amp * Math.sin(x * freq * 0.98 - t * 0.85) * Math.cos(z * freq * 1.12 + t * 0.92);
-                amp *= 0.50; freq *= 2.05;
-                // Octave 3
-                v += amp * Math.cos(y * freq * 1.05 + t * 1.05) * Math.sin(x * freq * 0.90 - t * 0.70);
-                amp *= 0.50; freq *= 2.05;
-                // Octave 4 — medium detail
-                v += amp * Math.sin(z * freq * 1.02 + t * 1.15) * Math.cos(x * freq * 0.88 + t);
-                amp *= 0.50; freq *= 2.05;
-                // Octave 5 — fine crinkle
-                v += amp * Math.cos(y * freq * 0.96 - t * 0.62) * Math.sin(z * freq * 1.08);
-                amp *= 0.50; freq *= 2.05;
-                // Octave 6 — micro surface
-                v += amp * Math.sin(x * freq * 1.00 + t * 0.55) * Math.cos(y * freq * 0.94 - t * 0.48);
-                return v;
+            // ── Ultra-Smooth Harmonic Fluid Wave (Silky Liquid Mercury Flow) ──
+            function fluidWave(x, y, z, t) {
+                // Low-frequency, viscous harmonic waves without jitter or crinkling
+                const w1 = Math.sin(x * 1.15 + t * 0.90) * Math.cos(y * 1.05 + t * 0.80) * Math.sin(z * 0.95 + t * 0.72);
+                const w2 = Math.sin(x * 1.85 - t * 0.70) * Math.cos(z * 1.70 + t * 0.65) * 0.45;
+                const w3 = Math.cos(y * 1.60 + t * 0.75) * Math.sin(x * 1.55 - t * 0.55) * 0.30;
+                return (w1 + w2 + w3) * 0.14;
             }
 
             const clock = new THREE.Clock();
@@ -824,35 +810,35 @@
                 if (!isVisible) return;
 
                 const dt = Math.min(clock.getDelta(), 0.08);
-                const time = clock.getElapsedTime() * 0.48;
+                const time = clock.getElapsedTime() * 0.36;
 
                 // Sync with global cursor tracker & circling gesture detector
                 const trackerState = cursorTracker.update(dt);
                 const circlingIntensity = trackerState.circlingIntensity;
 
                 // ── Frame-rate independent smooth rotation damping ──
-                const lerpFactor = 1.0 - Math.exp(-6.5 * dt);
+                const lerpFactor = 1.0 - Math.exp(-4.8 * dt);
                 currentRotX += (targetRotX - currentRotX) * lerpFactor;
                 currentRotY += (targetRotY - currentRotY) * lerpFactor;
 
                 // ── Dynamic Vortex Twist Deformation Physics (Spring-Damper) ──
-                const targetTwist = circlingIntensity * 1.50;
+                const targetTwist = circlingIntensity * 1.25;
                 const twistDiff = targetTwist - currentTwist;
-                twistVel += (twistDiff * 16.0 - twistVel * 6.0) * dt;
+                twistVel += (twistDiff * 14.0 - twistVel * 5.5) * dt;
                 currentTwist += twistVel * dt;
 
                 // ── Rotational Vortex Spin Acceleration ──
                 vortexSpin += currentTwist * 0.60 * dt;
                 vortexSpin *= Math.exp(-1.6 * dt);
 
-                blobMesh.rotation.x = currentRotX + time * 0.12;
-                blobMesh.rotation.y = currentRotY + time * 0.18 + vortexSpin;
-                blobMesh.rotation.z = currentTwist * 0.32;
+                blobMesh.rotation.x = currentRotX + time * 0.08;
+                blobMesh.rotation.y = currentRotY + time * 0.12 + vortexSpin;
+                blobMesh.rotation.z = currentTwist * 0.28;
 
-                // Shell counter-rotates slightly for parallax depth & crystal refraction
-                shellMesh.rotation.x = -(currentRotX * 0.3) + time * 0.06;
-                shellMesh.rotation.y = -(currentRotY * 0.3) + time * 0.09 - vortexSpin * 0.5;
-                shellMesh.rotation.z = -currentTwist * 0.18;
+                // Shell counter-rotates gently for silky parallax depth & crystal refraction
+                shellMesh.rotation.x = -(currentRotX * 0.25) + time * 0.04;
+                shellMesh.rotation.y = -(currentRotY * 0.25) + time * 0.06 - vortexSpin * 0.4;
+                shellMesh.rotation.z = -currentTwist * 0.16;
 
                 // ── Gyroscope Rings React to Vortex Swirl ──
                 const swirlFactor = 1.0 + Math.abs(currentTwist) * 2.6;
@@ -896,8 +882,8 @@
 
                     // 1. Torsional twist along vertical Y axis:
                     // Top and bottom vertices twist in opposite directions around the vertical pole
-                    const yNorm = oy / 1.68; // -1 to +1
-                    const twistAngle = yNorm * currentTwist * 1.60;
+                    const yNorm = oy / 1.30; // normalized height: -1 to +1
+                    const twistAngle = yNorm * currentTwist * 1.55;
                     const cosT = Math.cos(twistAngle);
                     const sinT = Math.sin(twistAngle);
 
@@ -912,14 +898,13 @@
                         tz *= waistPinch;
                     }
 
-                    // 2. Silky organic fBm surface displacement
+                    // 2. Silky organic fluid wave surface displacement
                     const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
                     const nx = tx / len;
                     const ny = ty / len;
                     const nz = tz / len;
 
-                    // fBm displacement — silky with fine organic detail
-                    const displacement = 1.0 + fBm(nx, ny, nz, time) * 0.16;
+                    const displacement = 1.0 + fluidWave(nx, ny, nz, time);
 
                     positions[idx] = tx * displacement;
                     positions[idx + 1] = ty * displacement;
@@ -1170,9 +1155,9 @@
                 return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
             }
 
-            const COUNT = 520;
-            const SW = 210; // horizontal sigma (px)
-            const SH = 90;  // vertical sigma (px)
+            const COUNT = 360;
+            const SW = 95;  // horizontal sigma (px) - compact sleek scale
+            const SH = 44;  // vertical sigma (px)
 
             const particles = Array.from({ length: COUNT }, () => {
                 let ox, oy, nd;
@@ -1192,7 +1177,7 @@
                     ox,
                     oy,
                     nd,
-                    size: 1.5 + Math.random() * 2.5,
+                    size: 1.1 + Math.random() * 1.8,
                     bright,
                     phase: Math.random() * Math.PI * 2,
                     speed: 0.35 + Math.random() * 0.55,
@@ -1223,7 +1208,7 @@
                 expansion += (targetExpansion - expansion) * rate;
 
                 // Ultra-smooth follow cursor
-                const followRate = 1.0 - Math.exp(-9.0 * dt);
+                const followRate = 1.0 - Math.exp(-11.0 * dt);
                 cx += (mx - cx) * followRate;
                 cy += (my - cy) * followRate;
 
@@ -1231,10 +1216,10 @@
 
                 const isLight = document.body.classList.contains('light-mode');
 
-                // Dynamic scale: contracted (~44%) when cursor is still, expanded (up to ~112%) when moving
-                const curScale = 0.44 + 0.68 * expansion;
-                const driftMult = 0.35 + 0.75 * expansion;
-                const ease = 0.065 + (1 - expansion) * 0.035;
+                // Dynamic scale: compact contracted (~34%) when cursor is still, expanded (~78%) when moving
+                const curScale = 0.34 + 0.44 * expansion;
+                const driftMult = 0.28 + 0.55 * expansion;
+                const ease = 0.075 + (1 - expansion) * 0.040;
 
                 for (let i = 0; i < particles.length; i++) {
                     const p = particles[i];
