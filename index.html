@@ -420,6 +420,135 @@
         }, { threshold: 0.12 });
         revealEls.forEach(el => revealObs.observe(el));
 
+        // ───── High-Precision Cursor & Circling Gesture Tracker ─────
+        const cursorTracker = (function () {
+            let mx = window.innerWidth / 2;
+            let my = window.innerHeight / 2;
+            let prevMx = mx;
+            let prevMy = my;
+            let lastMoveTime = performance.now();
+            let mouseSpeed = 0;
+
+            // Rolling buffer of recent cursor positions for circle detection
+            const history = [];
+            const MAX_HISTORY = 26;
+            const TIME_WINDOW = 400; // ms
+
+            let rawCircling = 0;
+            let circlingIntensity = 0; // -1 (counter-clockwise) to +1 (clockwise)
+
+            function onMove(x, y) {
+                mx = x;
+                my = y;
+                const now = performance.now();
+                lastMoveTime = now;
+
+                history.push({ x, y, t: now });
+                while (history.length > 0 && (now - history[0].t > TIME_WINDOW || history.length > MAX_HISTORY)) {
+                    history.shift();
+                }
+
+                if (history.length >= 7) {
+                    // Compute centroid
+                    let sumX = 0, sumY = 0;
+                    for (let i = 0; i < history.length; i++) {
+                        sumX += history[i].x;
+                        sumY += history[i].y;
+                    }
+                    const cX = sumX / history.length;
+                    const cY = sumY / history.length;
+
+                    // Compute average radius around centroid
+                    let sumR = 0;
+                    for (let i = 0; i < history.length; i++) {
+                        sumR += Math.hypot(history[i].x - cX, history[i].y - cY);
+                    }
+                    const avgR = sumR / history.length;
+
+                    // Compute centroid drift between first and second half of sample window
+                    const half = Math.floor(history.length / 2);
+                    let h1X = 0, h1Y = 0, h2X = 0, h2Y = 0;
+                    for (let i = 0; i < half; i++) {
+                        h1X += history[i].x;
+                        h1Y += history[i].y;
+                    }
+                    for (let i = half; i < history.length; i++) {
+                        h2X += history[i].x;
+                        h2Y += history[i].y;
+                    }
+                    const drift = Math.hypot(
+                        (h2X / (history.length - half)) - (h1X / half),
+                        (h2Y / (history.length - half)) - (h1Y / half)
+                    );
+
+                    // Circling in a localized place: moderate radius (10px to 380px) and low centroid drift
+                    if (avgR >= 10 && avgR <= 380 && drift < avgR * 1.5) {
+                        // Cumulative signed angular change around centroid
+                        let totalAngle = 0;
+                        let lastAngle = Math.atan2(history[0].y - cY, history[0].x - cX);
+                        for (let i = 1; i < history.length; i++) {
+                            const curAngle = Math.atan2(history[i].y - cY, history[i].x - cX);
+                            let dAngle = curAngle - lastAngle;
+                            while (dAngle > Math.PI) dAngle -= Math.PI * 2;
+                            while (dAngle < -Math.PI) dAngle += Math.PI * 2;
+                            totalAngle += dAngle;
+                            lastAngle = curAngle;
+                        }
+
+                        const dtSec = (now - history[0].t) / 1000;
+                        const angularVel = totalAngle / Math.max(0.08, dtSec); // rad/s
+
+                        // Normalize: a full rotation in ~0.6s is ~10 rad/s
+                        if (Math.abs(totalAngle) > 0.9) {
+                            rawCircling = Math.max(-1, Math.min(1, angularVel / 8.5));
+                        } else {
+                            rawCircling *= 0.75;
+                        }
+                    } else {
+                        rawCircling *= 0.65;
+                    }
+                } else {
+                    rawCircling *= 0.75;
+                }
+            }
+
+            window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY), { passive: true });
+            window.addEventListener('touchmove', e => {
+                if (e.touches && e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+
+            return {
+                get mx() { return mx; },
+                get my() { return my; },
+                get lastMoveTime() { return lastMoveTime; },
+                getCirclingIntensity() { return circlingIntensity; },
+                update(dt) {
+                    const now = performance.now();
+                    const distMoved = Math.hypot(mx - prevMx, my - prevMy);
+                    prevMx = mx;
+                    prevMy = my;
+
+                    mouseSpeed += (distMoved - mouseSpeed) * Math.min(1, 14 * dt);
+
+                    if (now - lastMoveTime > 150) {
+                        rawCircling *= Math.exp(-8.0 * dt);
+                    }
+
+                    const rate = Math.abs(rawCircling) > Math.abs(circlingIntensity) ? 9.0 : 4.5;
+                    circlingIntensity += (rawCircling - circlingIntensity) * Math.min(1, rate * dt);
+                    if (Math.abs(circlingIntensity) < 0.001) circlingIntensity = 0;
+
+                    return {
+                        mx,
+                        my,
+                        mouseSpeed,
+                        circlingIntensity,
+                        isMoving: (now - lastMoveTime < 150) && (mouseSpeed > 0.5)
+                    };
+                }
+            };
+        })();
+
         // ───── Complex 3D Organic WebGL Blob (Three.js) ─────
         function init3DBlob() {
             const canvas = document.getElementById('heroBlobCanvas');
@@ -478,8 +607,8 @@
             scene.background = null;
             pmrem.dispose();
 
-            // 1. Core 3D Organic Deformable Mesh
-            const detail = window.innerWidth < 768 ? 64 : 96;
+            // 1. Core 3D Organic Deformable Mesh (smooth high-density geometry without CPU spikes)
+            const detail = window.innerWidth < 768 ? 3 : 4;
             const geometry = new THREE.IcosahedronGeometry(1.68, detail);
             const posAttr = geometry.attributes.position;
             const origPos = new Float32Array(posAttr.array);
@@ -513,7 +642,7 @@
             scene.add(blobMesh);
 
             // 2. Outer Translucent Shell — depth & parallax
-            const shellGeo = new THREE.IcosahedronGeometry(1.96, 24);
+            const shellGeo = new THREE.IcosahedronGeometry(1.96, 2);
             const shellMat = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color('#612D53'),
                 roughness: 0.02,
@@ -532,7 +661,7 @@
             scene.add(shellMesh);
 
             // 3. Inner Glowing Wireframe Core (Engineering Heart)
-            const innerGeo = new THREE.IcosahedronGeometry(1.18, 12);
+            const innerGeo = new THREE.IcosahedronGeometry(1.18, 2);
             const innerMat = new THREE.MeshBasicMaterial({
                 color: new THREE.Color('#c46b8a'),
                 wireframe: true,
@@ -648,6 +777,9 @@
             // 6. Interactive Mouse Physics & 3D Deform Loop
             let targetRotX = 0, targetRotY = 0;
             let currentRotX = 0, currentRotY = 0;
+            let currentTwist = 0;
+            let twistVel = 0;
+            let vortexSpin = 0;
             let isVisible = true;
 
             const observer = new IntersectionObserver((entries) => {
@@ -691,39 +823,60 @@
                 requestAnimationFrame(animate);
                 if (!isVisible) return;
 
+                const dt = Math.min(clock.getDelta(), 0.08);
                 const time = clock.getElapsedTime() * 0.48;
 
-                // Smooth rotation damping
-                currentRotX += (targetRotX - currentRotX) * 0.038;
-                currentRotY += (targetRotY - currentRotY) * 0.038;
+                // Sync with global cursor tracker & circling gesture detector
+                const trackerState = cursorTracker.update(dt);
+                const circlingIntensity = trackerState.circlingIntensity;
+
+                // ── Frame-rate independent smooth rotation damping ──
+                const lerpFactor = 1.0 - Math.exp(-6.5 * dt);
+                currentRotX += (targetRotX - currentRotX) * lerpFactor;
+                currentRotY += (targetRotY - currentRotY) * lerpFactor;
+
+                // ── Dynamic Vortex Twist Deformation Physics (Spring-Damper) ──
+                const targetTwist = circlingIntensity * 1.50;
+                const twistDiff = targetTwist - currentTwist;
+                twistVel += (twistDiff * 16.0 - twistVel * 6.0) * dt;
+                currentTwist += twistVel * dt;
+
+                // ── Rotational Vortex Spin Acceleration ──
+                vortexSpin += currentTwist * 0.60 * dt;
+                vortexSpin *= Math.exp(-1.6 * dt);
 
                 blobMesh.rotation.x = currentRotX + time * 0.12;
-                blobMesh.rotation.y = currentRotY + time * 0.18;
+                blobMesh.rotation.y = currentRotY + time * 0.18 + vortexSpin;
+                blobMesh.rotation.z = currentTwist * 0.32;
 
-                // Shell counter-rotates slightly for parallax depth
+                // Shell counter-rotates slightly for parallax depth & crystal refraction
                 shellMesh.rotation.x = -(currentRotX * 0.3) + time * 0.06;
-                shellMesh.rotation.y = -(currentRotY * 0.3) + time * 0.09;
+                shellMesh.rotation.y = -(currentRotY * 0.3) + time * 0.09 - vortexSpin * 0.5;
+                shellMesh.rotation.z = -currentTwist * 0.18;
 
-                // Rings
-                ring1.rotation.z += 0.005;
-                ring1.rotation.y += 0.003;
-                ring2.rotation.x += 0.004;
-                ring2.rotation.z -= 0.005;
-                ring3.rotation.y += 0.006;
-                ring3.rotation.x -= 0.003;
+                // ── Gyroscope Rings React to Vortex Swirl ──
+                const swirlFactor = 1.0 + Math.abs(currentTwist) * 2.6;
+                ring1.rotation.z += (0.005 * swirlFactor) + currentTwist * 0.022;
+                ring1.rotation.y += 0.003 * swirlFactor;
+                ring2.rotation.x += (0.004 * swirlFactor) - currentTwist * 0.016;
+                ring2.rotation.z -= 0.005 * swirlFactor;
+                ring3.rotation.y += (0.006 * swirlFactor) + currentTwist * 0.024;
+                ring3.rotation.x -= 0.003 * swirlFactor;
 
-                // Particles
-                particles.rotation.y -= 0.002;
-                particles.rotation.x += 0.001;
-                particles2.rotation.y += 0.003;
-                particles2.rotation.z -= 0.001;
+                // Orbiting Particles accelerate inside the vortex
+                particles.rotation.y -= (0.002 * swirlFactor) + currentTwist * 0.015;
+                particles.rotation.x += 0.001 * swirlFactor;
+                particles2.rotation.y += (0.003 * swirlFactor) + currentTwist * 0.018;
+                particles2.rotation.z -= 0.001 * swirlFactor;
 
-                // ── Dynamic emissive pulse (heartbeat glow) ──
-                const pulse = 0.20 + Math.sin(time * 1.6) * 0.10 + Math.sin(time * 3.1) * 0.04;
+                const absTwist = Math.abs(currentTwist);
+
+                // ── Dynamic emissive pulse + vortex energy surge ──
+                const pulse = 0.20 + Math.sin(time * 1.6) * 0.10 + Math.sin(time * 3.1) * 0.04 + absTwist * 0.42;
                 material.emissiveIntensity = pulse;
 
-                // ── Dynamic iridescence shift ──
-                material.iridescence = 0.55 + Math.sin(time * 0.9) * 0.20;
+                // ── Dynamic iridescence sheen surge ──
+                material.iridescence = 0.55 + Math.sin(time * 0.9) * 0.20 + absTwist * 0.35;
 
                 // ── Accent light orbit ──
                 accentLight.position.x = Math.sin(time * 1.2) * 3.5;
@@ -741,17 +894,36 @@
                     const oy = origPos[idx + 1];
                     const oz = origPos[idx + 2];
 
-                    const len = Math.sqrt(ox * ox + oy * oy + oz * oz);
-                    const nx = ox / len;
-                    const ny = oy / len;
-                    const nz = oz / len;
+                    // 1. Torsional twist along vertical Y axis:
+                    // Top and bottom vertices twist in opposite directions around the vertical pole
+                    const yNorm = oy / 1.68; // -1 to +1
+                    const twistAngle = yNorm * currentTwist * 1.60;
+                    const cosT = Math.cos(twistAngle);
+                    const sinT = Math.sin(twistAngle);
+
+                    let tx = ox * cosT - oz * sinT;
+                    let ty = oy;
+                    let tz = ox * sinT + oz * cosT;
+
+                    // Hydrodynamic vortex waist cinch when heavily twisted
+                    if (absTwist > 0.03) {
+                        const waistPinch = 1.0 - absTwist * 0.18 * Math.cos(yNorm * (Math.PI * 0.5));
+                        tx *= waistPinch;
+                        tz *= waistPinch;
+                    }
+
+                    // 2. Silky organic fBm surface displacement
+                    const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
+                    const nx = tx / len;
+                    const ny = ty / len;
+                    const nz = tz / len;
 
                     // fBm displacement — silky with fine organic detail
                     const displacement = 1.0 + fBm(nx, ny, nz, time) * 0.16;
 
-                    positions[idx] = ox * displacement;
-                    positions[idx + 1] = oy * displacement;
-                    positions[idx + 2] = oz * displacement;
+                    positions[idx] = tx * displacement;
+                    positions[idx + 1] = ty * displacement;
+                    positions[idx + 2] = tz * displacement;
                 }
 
                 posAttr.needsUpdate = true;
@@ -984,29 +1156,11 @@
             resize();
             window.addEventListener('resize', resize);
 
-            // Target & smoothed cursor position
-            let mx = window.innerWidth / 2;
-            let my = window.innerHeight / 2;
-            let cx = mx;
-            let cy = my;
-            let prevMx = mx;
-            let prevMy = my;
-            let mouseSpeed = 0;
-            let expansion = 0.0; // 0 = fully contracted (idle), 1 = fully expanded/detracted (moving)
-            let lastMoveTime = performance.now();
-
-            function onPointerMove(x, y) {
-                mx = x;
-                my = y;
-                lastMoveTime = performance.now();
-            }
-
-            window.addEventListener('mousemove', e => onPointerMove(e.clientX, e.clientY), { passive: true });
-            window.addEventListener('touchmove', e => {
-                if (e.touches && e.touches[0]) {
-                    onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
-                }
-            }, { passive: true });
+            // Smoothed cursor position linked to cursorTracker
+            let cx = cursorTracker.mx;
+            let cy = cursorTracker.my;
+            let expansion = 0.0;
+            let prevFrameTime = performance.now();
 
             // Box-Muller Gaussian sample
             function gauss() {
@@ -1033,10 +1187,11 @@
                 const bright = Math.max(0.12, 1 - (nd / 2.35) * 0.85);
 
                 return {
-                    x: mx + ox,
-                    y: my + oy,
+                    x: cx + ox,
+                    y: cy + oy,
                     ox,
                     oy,
+                    nd,
                     size: 1.5 + Math.random() * 2.5,
                     bright,
                     phase: Math.random() * Math.PI * 2,
@@ -1053,26 +1208,24 @@
                 requestAnimationFrame(frame);
                 ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
-                // Calculate cursor movement velocity & idle detection
                 const now = performance.now();
-                const distMoved = Math.hypot(mx - prevMx, my - prevMy);
-                prevMx = mx;
-                prevMy = my;
+                const dt = Math.min(0.08, Math.max(0.001, (now - prevFrameTime) / 1000));
+                prevFrameTime = now;
 
-                mouseSpeed += (distMoved - mouseSpeed) * 0.22;
+                const mx = cursorTracker.mx;
+                const my = cursorTracker.my;
+                const circlingIntensity = cursorTracker.getCirclingIntensity();
 
-                // When cursor is moving: detract / expand outward
-                // When cursor stops / idle: contract inward into a tight dense nucleus
-                const isMoving = (now - lastMoveTime < 140) && (mouseSpeed > 0.6);
-                const targetExpansion = isMoving ? Math.min(1.0, mouseSpeed / 9 + 0.32) : 0.0;
-
-                // Fast responsive expansion on movement, smooth graceful contraction on stopping
+                // Movement velocity & expansion
+                const isMoving = (now - cursorTracker.lastMoveTime < 160);
+                const targetExpansion = isMoving ? Math.min(1.0, 0.32 + Math.abs(circlingIntensity) * 0.45) : 0.0;
                 const rate = targetExpansion > expansion ? 0.14 : 0.045;
                 expansion += (targetExpansion - expansion) * rate;
 
-                // Smoothly follow cursor
-                cx += (mx - cx) * 0.085;
-                cy += (my - cy) * 0.085;
+                // Ultra-smooth follow cursor
+                const followRate = 1.0 - Math.exp(-9.0 * dt);
+                cx += (mx - cx) * followRate;
+                cy += (my - cy) * followRate;
 
                 t += 0.009;
 
@@ -1094,9 +1247,20 @@
                     const trailX = (cx - mx) * p.lag * 2.0 * expansion;
                     const trailY = (cy - my) * p.lag * 2.0 * expansion;
 
+                    // Circling vortex swirl twist around cursor
+                    let effOx = p.ox;
+                    let effOy = p.oy;
+                    if (Math.abs(circlingIntensity) > 0.02) {
+                        const swirlRad = circlingIntensity * 0.52 * Math.max(0.2, 1.0 - (p.nd / 2.35) * 0.55);
+                        const cosS = Math.cos(swirlRad);
+                        const sinS = Math.sin(swirlRad);
+                        effOx = p.ox * cosS - p.oy * sinS;
+                        effOy = p.ox * sinS + p.oy * cosS;
+                    }
+
                     // Target position with dynamic contraction / detraction scale
-                    const tx = cx + (p.ox * curScale) + driftX + trailX;
-                    const ty = cy + (p.oy * curScale) + driftY + trailY;
+                    const tx = cx + (effOx * curScale) + driftX + trailX;
+                    const ty = cy + (effOy * curScale) + driftY + trailY;
 
                     p.x += (tx - p.x) * ease;
                     p.y += (ty - p.y) * ease;
