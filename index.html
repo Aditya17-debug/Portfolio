@@ -90,11 +90,7 @@
                 </div>
             </div>
 
-            <!-- Hero Ambient 3D Complex Morphing Blob -->
-            <div class="hero__blob-wrapper" id="heroBlobWrapper" aria-hidden="true">
-                <div class="hero__blob-glow"></div>
-                <canvas id="heroBlobCanvas" class="hero__blob-canvas"></canvas>
-            </div>
+
 
             <!-- Scroll Indicator -->
             <div class="hero__scroll">
@@ -372,8 +368,7 @@
 
     </div><!-- End main-wrapper -->
 
-    <!-- ═══════════════ THREE.JS (3D WEBGL GRAPHICS) ═══════════════ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+
 
     <!-- ═══════════════ SUPABASE CLOUD DATABASE SDK ═══════════════ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -763,12 +758,93 @@
             animate();
         }
 
-        // Initialize 3D Blob when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init3DBlob);
-        } else {
-            init3DBlob();
-        }
+        // ───── Pixel-Particle Cursor Cloud ─────
+        (function initCursorBlob() {
+            const canvas = document.getElementById('cursorBlobCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width  = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            // Target & smoothed cursor position
+            let mx = window.innerWidth  / 2;
+            let my = window.innerHeight / 2;
+            let cx = mx, cy = my;
+
+            window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; }, { passive: true });
+
+            // Box-Muller Gaussian sample
+            function gauss() {
+                let u = 0, v = 0;
+                while (!u) u = Math.random();
+                while (!v) v = Math.random();
+                return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+            }
+
+            const COUNT  = 480;
+            const SW     = 200;   // horizontal sigma (px)
+            const SH     = 95;    // vertical sigma  (px)
+
+            const particles = Array.from({ length: COUNT }, () => {
+                const ox  = gauss() * SW;
+                const oy  = gauss() * SH;
+                const nd  = Math.sqrt((ox / SW) ** 2 + (oy / SH) ** 2); // normalised distance
+                const bright = Math.max(0, 1 - nd * 0.72);               // centre glows more
+                return {
+                    x: mx + ox,  y: my + oy,
+                    ox, oy,
+                    size: 1.4 + Math.random() * 2.2,
+                    bright,
+                    phase : Math.random() * Math.PI * 2,
+                    speed : 0.35 + Math.random() * 0.55,
+                    dox   : (Math.random() - 0.5) * 22,   // oscillation offset X
+                    doy   : (Math.random() - 0.5) * 14,   // oscillation offset Y
+                };
+            });
+
+            let t = 0;
+
+            function frame() {
+                requestAnimationFrame(frame);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Smooth-follow cursor
+                cx += (mx - cx) * 0.075;
+                cy += (my - cy) * 0.075;
+
+                t += 0.009;
+
+                for (const p of particles) {
+                    // Target position = cursor + home offset + gentle drift
+                    const tx = cx + p.ox + Math.sin(t * p.speed + p.phase)         * p.dox;
+                    const ty = cy + p.oy + Math.cos(t * p.speed + p.phase * 0.71)  * p.doy;
+
+                    p.x += (tx - p.x) * 0.055;
+                    p.y += (ty - p.y) * 0.055;
+
+                    // Subtle twinkle
+                    const twinkle = 0.72 + Math.sin(t * 4.2 + p.phase) * 0.18;
+                    const alpha   = p.bright * twinkle;
+                    if (alpha < 0.04) continue;
+
+                    const g = Math.round(210 + p.bright * 45);
+                    ctx.fillStyle = `rgba(${g},${g},${g},${alpha.toFixed(2)})`;
+                    ctx.fillRect(
+                        Math.round(p.x - p.size * 0.5),
+                        Math.round(p.y - p.size * 0.5),
+                        Math.ceil(p.size),
+                        Math.ceil(p.size)
+                    );
+                }
+            }
+
+            frame();
+        })();
 
         // ───── Hide Mouse Indicator on Scroll ─────
         const heroScroll = document.querySelector('.hero__scroll');
