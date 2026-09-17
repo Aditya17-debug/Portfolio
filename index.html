@@ -90,11 +90,7 @@
                 </div>
             </div>
 
-            <!-- Hero Ambient 3D Complex Morphing Blob -->
-            <div class="hero__blob-wrapper" id="heroBlobWrapper" aria-hidden="true">
-                <div class="hero__blob-glow"></div>
-                <canvas id="heroBlobCanvas" class="hero__blob-canvas"></canvas>
-            </div>
+
 
             <!-- Scroll Indicator -->
             <div class="hero__scroll">
@@ -372,8 +368,7 @@
 
     </div><!-- End main-wrapper -->
 
-    <!-- ═══════════════ THREE.JS (3D WEBGL GRAPHICS) ═══════════════ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+
 
     <!-- ═══════════════ SUPABASE CLOUD DATABASE SDK ═══════════════ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -420,199 +415,85 @@
         }, { threshold: 0.12 });
         revealEls.forEach(el => revealObs.observe(el));
 
-        // ───── High-Precision Cursor & Circling Gesture Tracker ─────
-        const cursorTracker = (function () {
-            let mx = window.innerWidth / 2;
-            let my = window.innerHeight / 2;
-            let prevMx = mx;
-            let prevMy = my;
-            let lastMoveTime = performance.now();
-            let mouseSpeed = 0;
-
-            // Rolling buffer of recent cursor positions for circle detection
-            const history = [];
-            const MAX_HISTORY = 26;
-            const TIME_WINDOW = 400; // ms
-
-            let rawCircling = 0;
-            let circlingIntensity = 0; // -1 (counter-clockwise) to +1 (clockwise)
-
-            function onMove(x, y) {
-                mx = x;
-                my = y;
-                const now = performance.now();
-                lastMoveTime = now;
-
-                history.push({ x, y, t: now });
-                while (history.length > 0 && (now - history[0].t > TIME_WINDOW || history.length > MAX_HISTORY)) {
-                    history.shift();
-                }
-
-                if (history.length >= 7) {
-                    // Compute centroid
-                    let sumX = 0, sumY = 0;
-                    for (let i = 0; i < history.length; i++) {
-                        sumX += history[i].x;
-                        sumY += history[i].y;
-                    }
-                    const cX = sumX / history.length;
-                    const cY = sumY / history.length;
-
-                    // Compute average radius around centroid
-                    let sumR = 0;
-                    for (let i = 0; i < history.length; i++) {
-                        sumR += Math.hypot(history[i].x - cX, history[i].y - cY);
-                    }
-                    const avgR = sumR / history.length;
-
-                    // Compute centroid drift between first and second half of sample window
-                    const half = Math.floor(history.length / 2);
-                    let h1X = 0, h1Y = 0, h2X = 0, h2Y = 0;
-                    for (let i = 0; i < half; i++) {
-                        h1X += history[i].x;
-                        h1Y += history[i].y;
-                    }
-                    for (let i = half; i < history.length; i++) {
-                        h2X += history[i].x;
-                        h2Y += history[i].y;
-                    }
-                    const drift = Math.hypot(
-                        (h2X / (history.length - half)) - (h1X / half),
-                        (h2Y / (history.length - half)) - (h1Y / half)
-                    );
-
-                    // Circling in a localized place: moderate radius (10px to 380px) and low centroid drift
-                    if (avgR >= 10 && avgR <= 380 && drift < avgR * 1.5) {
-                        // Cumulative signed angular change around centroid
-                        let totalAngle = 0;
-                        let lastAngle = Math.atan2(history[0].y - cY, history[0].x - cX);
-                        for (let i = 1; i < history.length; i++) {
-                            const curAngle = Math.atan2(history[i].y - cY, history[i].x - cX);
-                            let dAngle = curAngle - lastAngle;
-                            while (dAngle > Math.PI) dAngle -= Math.PI * 2;
-                            while (dAngle < -Math.PI) dAngle += Math.PI * 2;
-                            totalAngle += dAngle;
-                            lastAngle = curAngle;
-                        }
-
-                        const dtSec = (now - history[0].t) / 1000;
-                        const angularVel = totalAngle / Math.max(0.08, dtSec); // rad/s
-
-                        // Normalize: a full rotation in ~0.6s is ~10 rad/s
-                        if (Math.abs(totalAngle) > 0.9) {
-                            rawCircling = Math.max(-1, Math.min(1, angularVel / 8.5));
-                        } else {
-                            rawCircling *= 0.75;
-                        }
-                    } else {
-                        rawCircling *= 0.65;
-                    }
-                } else {
-                    rawCircling *= 0.75;
-                }
+        // ───── Cursor Tracker (Shared between Three.js blob & pixel-particle cloud) ─────
+        const cursorTracker = {
+            mx: window.innerWidth / 2,
+            my: window.innerHeight / 2,
+            lastMoveTime: performance.now(),
+            history: [],
+            _circling: 0,
+            update(dt) {
+                return { circlingIntensity: this._circling };
+            },
+            getCirclingIntensity() {
+                return this._circling;
             }
+        };
+        window.addEventListener('mousemove', (e) => {
+            cursorTracker.mx = e.clientX;
+            cursorTracker.my = e.clientY;
+            cursorTracker.lastMoveTime = performance.now();
+            // Simple circling intensity heuristic
+            const h = cursorTracker.history;
+            h.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+            if (h.length > 30) h.shift();
+            if (h.length > 5) {
+                const dx = h[h.length-1].x - h[0].x;
+                const dy = h[h.length-1].y - h[0].y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const dt2 = (h[h.length-1].t - h[0].t) / 1000;
+                cursorTracker._circling = dt2 > 0 ? Math.tanh((dist / Math.max(dt2 * 200, 1)) - 1) * 0.8 : 0;
+            }
+        }, { passive: true });
 
-            window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY), { passive: true });
-            window.addEventListener('touchmove', e => {
-                if (e.touches && e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY);
-            }, { passive: true });
+        // ───── 3D Fluid Blob (Three.js) ─────
+        (function initThreeBlob() {
+            const wrapper = document.getElementById('heroBlobWrapper') || document.querySelector('.hero__blob-wrapper');
+            if (!wrapper || typeof THREE === 'undefined') return;
 
-            return {
-                get mx() { return mx; },
-                get my() { return my; },
-                get lastMoveTime() { return lastMoveTime; },
-                getCirclingIntensity() { return circlingIntensity; },
-                update(dt) {
-                    const now = performance.now();
-                    const distMoved = Math.hypot(mx - prevMx, my - prevMy);
-                    prevMx = mx;
-                    prevMy = my;
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(wrapper.clientWidth || 460, wrapper.clientHeight || 460);
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            wrapper.appendChild(renderer.domElement);
 
-                    mouseSpeed += (distMoved - mouseSpeed) * Math.min(1, 14 * dt);
-
-                    if (now - lastMoveTime > 150) {
-                        rawCircling *= Math.exp(-8.0 * dt);
-                    } 
-
-                    const rate = Math.abs(rawCircling) > Math.abs(circlingIntensity) ? 9.0 : 4.5;
-                    circlingIntensity += (rawCircling - circlingIntensity) * Math.min(1, rate * dt);
-                    if (Math.abs(circlingIntensity) < 0.001) circlingIntensity = 0;
-
-                    return {
-                        mx,
-                        my,
-                        mouseSpeed,
-                        circlingIntensity,
-                        isMoving: (now - lastMoveTime < 150) && (mouseSpeed > 0.5)
-                    };
-                }
-            };
-        })();
-
-        // ───── Complex 3D Organic WebGL Blob (Three.js) ─────
-        function init3DBlob() {
-            const canvas = document.getElementById('heroBlobCanvas');
-            const wrapper = document.getElementById('heroBlobWrapper');
-            if (!canvas || !wrapper || typeof THREE === 'undefined') return;
+            window.addEventListener('resize', () => {
+                const w = wrapper.clientWidth || 460;
+                const h = wrapper.clientHeight || 460;
+                renderer.setSize(w, h);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+            });
 
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-            camera.position.z = 6.6;
+            const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+            camera.position.set(0, 0, 5);
 
-            const renderer = new THREE.WebGLRenderer({
-                canvas: canvas,
-                alpha: true,
-                antialias: true,
-                powerPreference: 'high-performance'
+            // 1. Icosphere blob geometry
+            const blobGeo = new THREE.IcosahedronGeometry(1.30, 80);
+            const posAttr = blobGeo.getAttribute('position');
+            const origPos = Float32Array.from(posAttr.array);
+
+            // 2. Shell geometry (slightly larger, wireframe)
+            const shellGeo = new THREE.IcosahedronGeometry(1.60, 6);
+            const shellMat = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color('#612D53'),
+                emissive: new THREE.Color('#3d1228'),
+                emissiveIntensity: 0.15,
+                roughness: 0.0,
+                metalness: 0.3,
+                clearcoat: 1.0,
+                transparent: true,
+                opacity: 0.10,
+                wireframe: false,
+                side: THREE.BackSide
             });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
-            // ── Cinematic Rendering Pipeline ──
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.35;
-            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            const shellMesh = new THREE.Mesh(shellGeo, shellMat);
+            scene.add(shellMesh);
 
-            function handleResize() {
-                const width = wrapper.clientWidth || 460;
-                const height = wrapper.clientHeight || 460;
-                camera.aspect = width / height;
-                camera.updateProjectionMatrix();
-                renderer.setSize(width, height, false);
-            }
-            handleResize();
-            window.addEventListener('resize', handleResize);
-
-            // ── Procedural HDR Gradient Environment (real reflections) ──
-            const pmrem = new THREE.PMREMGenerator(renderer);
-            pmrem.compileEquirectangularShader();
-            const envScene = new THREE.Scene();
-            const envGeo = new THREE.SphereGeometry(50, 32, 32);
-            const envMat = new THREE.MeshBasicMaterial({
-                side: THREE.BackSide,
-                vertexColors: true
-            });
-            const envPositions = envGeo.attributes.position;
-            const envColors = new Float32Array(envPositions.count * 3);
-            for (let i = 0; i < envPositions.count; i++) {
-                const y = envPositions.getY(i);
-                const t = (y + 50) / 100;
-                // Top: deep plum, Bottom: dark charcoal
-                envColors[i * 3] = 0.10 + t * 0.42;  // R
-                envColors[i * 3 + 1] = 0.04 + t * 0.18;  // G
-                envColors[i * 3 + 2] = 0.12 + t * 0.22;  // B
-            }
-            envGeo.setAttribute('color', new THREE.BufferAttribute(envColors, 3));
-            envScene.add(new THREE.Mesh(envGeo, envMat));
-            const envMap = pmrem.fromScene(envScene).texture;
-            scene.environment = envMap;
-            scene.background = null;
-            pmrem.dispose();
-
-            // 1. Core 3D Organic Deformable Mesh (compact scale, silky smooth 60-120fps morphing)
-            const detail = 3;
-            const geometry = new THREE.IcosahedronGeometry(1.30, detail);
-            const posAttr = geometry.attributes.position;
-            const origPos = new Float32Array(posAttr.array);
-
+            // 3. Blob mesh (added after shell so it renders on top)
             // ── Hyper-Realistic PBR Material ──
             const material = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color('#853953'),
@@ -638,364 +519,359 @@
                 ior: 1.45,
                 flatShading: false
             });
-            const blobMesh = new THREE.Mesh(geometry, material);
+            const blobMesh = new THREE.Mesh(blobGeo, material);
             scene.add(blobMesh);
 
-            // 2. Outer Translucent Shell — depth & parallax
-            const shellGeo = new THREE.IcosahedronGeometry(1.52, 2);
-            const shellMat = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#612D53'),
-                roughness: 0.02,
-                metalness: 0.0,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.0,
-                transmission: 0.88,
-                thickness: 0.8,
-                ior: 1.35,
-                envMapIntensity: 2.0,
-                transparent: true,
-                opacity: 0.28,
-                side: THREE.BackSide
-            });
-            const shellMesh = new THREE.Mesh(shellGeo, shellMat);
-            scene.add(shellMesh);
-
-            // 3. Inner Glowing Wireframe Core (Engineering Heart)
-            const innerGeo = new THREE.IcosahedronGeometry(0.92, 2);
-            const innerMat = new THREE.MeshBasicMaterial({
-                color: new THREE.Color('#c46b8a'),
-                wireframe: true,
-                transparent: true,
-                opacity: 0.15
-            });
-            const innerCore = new THREE.Mesh(innerGeo, innerMat);
-            blobMesh.add(innerCore);
 
             // 4. Orbiting Gyroscope Halo Rings (compact proportion)
-            const ringGeo1 = new THREE.TorusGeometry(1.88, 0.010, 24, 160);
-            const ringMat1 = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#853953'),
-                emissive: new THREE.Color('#853953'),
-                emissiveIntensity: 0.4,
-                roughness: 0.0,
-                metalness: 0.5,
-                clearcoat: 1.0,
-                transparent: true,
-                opacity: 0.55
-            });
-            const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
-            ring1.rotation.x = Math.PI / 3;
-            ring1.rotation.y = Math.PI / 6;
-            scene.add(ring1);
+        const ringGeo1 = new THREE.TorusGeometry(1.88, 0.010, 24, 160);
+        const ringMat1 = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color('#853953'),
+            emissive: new THREE.Color('#853953'),
+            emissiveIntensity: 0.4,
+            roughness: 0.0,
+            metalness: 0.5,
+            clearcoat: 1.0,
+            transparent: true,
+            opacity: 0.55
+        });
+        const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+        ring1.rotation.x = Math.PI / 3;
+        ring1.rotation.y = Math.PI / 6;
+        scene.add(ring1);
 
-            const ringGeo2 = new THREE.TorusGeometry(2.10, 0.007, 24, 160);
-            const ringMat2 = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#f3f4f4'),
-                roughness: 0.0,
-                metalness: 0.8,
-                clearcoat: 1.0,
-                transparent: true,
-                opacity: 0.18
-            });
-            const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
-            ring2.rotation.x = -Math.PI / 4;
-            ring2.rotation.z = Math.PI / 4;
-            scene.add(ring2);
+        const ringGeo2 = new THREE.TorusGeometry(2.10, 0.007, 24, 160);
+        const ringMat2 = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color('#f3f4f4'),
+            roughness: 0.0,
+            metalness: 0.8,
+            clearcoat: 1.0,
+            transparent: true,
+            opacity: 0.18
+        });
+        const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+        ring2.rotation.x = -Math.PI / 4;
+        ring2.rotation.z = Math.PI / 4;
+        scene.add(ring2);
 
-            const ringGeo3 = new THREE.TorusGeometry(1.72, 0.008, 24, 140);
-            const ringMat3 = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#612D53'),
-                emissive: new THREE.Color('#612D53'),
-                emissiveIntensity: 0.3,
-                roughness: 0.0,
-                metalness: 0.6,
-                clearcoat: 1.0,
-                transparent: true,
-                opacity: 0.35
-            });
-            const ring3 = new THREE.Mesh(ringGeo3, ringMat3);
-            ring3.rotation.y = Math.PI / 5;
-            ring3.rotation.z = -Math.PI / 3;
-            scene.add(ring3);
+        const ringGeo3 = new THREE.TorusGeometry(1.72, 0.008, 24, 140);
+        const ringMat3 = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color('#612D53'),
+            emissive: new THREE.Color('#612D53'),
+            emissiveIntensity: 0.3,
+            roughness: 0.0,
+            metalness: 0.6,
+            clearcoat: 1.0,
+            transparent: true,
+            opacity: 0.35
+        });
+        const ring3 = new THREE.Mesh(ringGeo3, ringMat3);
+        ring3.rotation.y = Math.PI / 5;
+        ring3.rotation.z = -Math.PI / 3;
+        scene.add(ring3);
 
-            // 6. Orbiting Nano Particles (compact two tiers)
-            function makeParticles(count, rMin, rMax, color, size, opacity) {
-                const geo = new THREE.BufferGeometry();
-                const pos = new Float32Array(count * 3);
-                for (let i = 0; i < count; i++) {
-                    const theta = Math.random() * Math.PI * 2;
-                    const phi = Math.acos((Math.random() * 2) - 1);
-                    const r = rMin + Math.random() * (rMax - rMin);
-                    pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-                    pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-                    pos[i * 3 + 2] = r * Math.cos(phi);
-                }
-                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                const mat = new THREE.PointsMaterial({ color: new THREE.Color(color), size, transparent: true, opacity });
-                return new THREE.Points(geo, mat);
+        // 6. Orbiting Nano Particles (compact two tiers)
+        function makeParticles(count, rMin, rMax, color, size, opacity) {
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                const r = rMin + Math.random() * (rMax - rMin);
+                pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                pos[i * 3 + 2] = r * Math.cos(phi);
             }
-            const particles = makeParticles(36, 1.8, 2.5, '#c5b8c1', 0.032, 0.65);
-            const particles2 = makeParticles(20, 1.5, 1.8, '#d97aa0', 0.024, 0.45);
-            scene.add(particles);
-            scene.add(particles2);
-
-            // 7. Cinematic 7-Point Lighting Rig
-            // Key — warm rose top-right
-            const keyLight = new THREE.DirectionalLight('#ffb8d0', 2.2);
-            keyLight.position.set(5, 6, 4);
-            scene.add(keyLight);
-
-            // Rim — deep plum backlight (separation)
-            const rimLight = new THREE.DirectionalLight('#7b3568', 2.0);
-            rimLight.position.set(-6, -2, -3);
-            scene.add(rimLight);
-
-            // Fill — soft lavender from below-left
-            const fillLight = new THREE.DirectionalLight('#9b6fa0', 0.9);
-            fillLight.position.set(-3, -4, 3);
-            scene.add(fillLight);
-
-            // Specular — cool ice white overhead
-            const specularLight = new THREE.PointLight('#f3f4f4', 1.5, 14);
-            specularLight.position.set(0, 5, 3);
-            scene.add(specularLight);
-
-            // Accent — rosewood front-fill
-            const accentLight = new THREE.PointLight('#853953', 1.8, 7);
-            accentLight.position.set(2, -1, 5);
-            scene.add(accentLight);
-
-            // Kicker — violet from right-rear
-            const kickerLight = new THREE.PointLight('#4a1f6e', 1.4, 9);
-            kickerLight.position.set(4, 1, -4);
-            scene.add(kickerLight);
-
-            // Ambient — near-black warm base
-            const ambientLight = new THREE.AmbientLight('#120610', 2.2);
-            scene.add(ambientLight);
-
-            // 6. Interactive Mouse Physics & 3D Deform Loop
-            let targetRotX = 0, targetRotY = 0;
-            let currentRotX = 0, currentRotY = 0;
-            let currentTwist = 0;
-            let twistVel = 0;
-            let vortexSpin = 0;
-            let isVisible = true;
-
-            const observer = new IntersectionObserver((entries) => {
-                isVisible = entries[0].isIntersecting;
-            }, { threshold: 0.05 });
-            observer.observe(wrapper);
-
-            window.addEventListener('mousemove', (e) => {
-                const nx = (e.clientX / window.innerWidth) * 2 - 1;
-                const ny = -(e.clientY / window.innerHeight) * 2 + 1;
-                targetRotY = nx * 0.55;
-                targetRotX = -ny * 0.42;
-            }, { passive: true });
-
-            // ── Ultra-Smooth Harmonic Fluid Wave (Silky Liquid Mercury Flow) ──
-            function fluidWave(x, y, z, t) {
-                // Low-frequency, viscous harmonic waves without jitter or crinkling
-                const w1 = Math.sin(x * 1.15 + t * 0.90) * Math.cos(y * 1.05 + t * 0.80) * Math.sin(z * 0.95 + t * 0.72);
-                const w2 = Math.sin(x * 1.85 - t * 0.70) * Math.cos(z * 1.70 + t * 0.65) * 0.45;
-                const w3 = Math.cos(y * 1.60 + t * 0.75) * Math.sin(x * 1.55 - t * 0.55) * 0.30;
-                return (w1 + w2 + w3) * 0.14;
-            }
-
-            const clock = new THREE.Clock();
-
-            function animate() {
-                requestAnimationFrame(animate);
-                if (!isVisible) return;
-
-                const dt = Math.min(clock.getDelta(), 0.08);
-                const time = clock.getElapsedTime() * 0.36;
-
-                // Sync with global cursor tracker & circling gesture detector
-                const trackerState = cursorTracker.update(dt);
-                const circlingIntensity = trackerState.circlingIntensity;
-
-                // ── Frame-rate independent smooth rotation damping ──
-                const lerpFactor = 1.0 - Math.exp(-4.8 * dt);
-                currentRotX += (targetRotX - currentRotX) * lerpFactor;
-                currentRotY += (targetRotY - currentRotY) * lerpFactor;
-
-                // ── Dynamic Vortex Twist Deformation Physics (Spring-Damper) ──
-                const targetTwist = circlingIntensity * 1.25;
-                const twistDiff = targetTwist - currentTwist;
-                twistVel += (twistDiff * 14.0 - twistVel * 5.5) * dt;
-                currentTwist += twistVel * dt;
-
-                // ── Rotational Vortex Spin Acceleration ──
-                vortexSpin += currentTwist * 0.60 * dt;
-                vortexSpin *= Math.exp(-1.6 * dt);
-
-                blobMesh.rotation.x = currentRotX + time * 0.08;
-                blobMesh.rotation.y = currentRotY + time * 0.12 + vortexSpin;
-                blobMesh.rotation.z = currentTwist * 0.28;
-
-                // Shell counter-rotates gently for silky parallax depth & crystal refraction
-                shellMesh.rotation.x = -(currentRotX * 0.25) + time * 0.04;
-                shellMesh.rotation.y = -(currentRotY * 0.25) + time * 0.06 - vortexSpin * 0.4;
-                shellMesh.rotation.z = -currentTwist * 0.16;
-
-                // ── Gyroscope Rings React to Vortex Swirl ──
-                const swirlFactor = 1.0 + Math.abs(currentTwist) * 2.6;
-                ring1.rotation.z += (0.005 * swirlFactor) + currentTwist * 0.022;
-                ring1.rotation.y += 0.003 * swirlFactor;
-                ring2.rotation.x += (0.004 * swirlFactor) - currentTwist * 0.016;
-                ring2.rotation.z -= 0.005 * swirlFactor;
-                ring3.rotation.y += (0.006 * swirlFactor) + currentTwist * 0.024;
-                ring3.rotation.x -= 0.003 * swirlFactor;
-
-                // Orbiting Particles accelerate inside the vortex
-                particles.rotation.y -= (0.002 * swirlFactor) + currentTwist * 0.015;
-                particles.rotation.x += 0.001 * swirlFactor;
-                particles2.rotation.y += (0.003 * swirlFactor) + currentTwist * 0.018;
-                particles2.rotation.z -= 0.001 * swirlFactor;
-
-                const absTwist = Math.abs(currentTwist);
-
-                // ── Dynamic emissive pulse + vortex energy surge ──
-                const pulse = 0.20 + Math.sin(time * 1.6) * 0.10 + Math.sin(time * 3.1) * 0.04 + absTwist * 0.42;
-                material.emissiveIntensity = pulse;
-
-                // ── Dynamic iridescence sheen surge ──
-                material.iridescence = 0.55 + Math.sin(time * 0.9) * 0.20 + absTwist * 0.35;
-
-                // ── Accent light orbit ──
-                accentLight.position.x = Math.sin(time * 1.2) * 3.5;
-                accentLight.position.y = Math.cos(time * 0.9) * 2.5;
-                kickerLight.position.x = Math.cos(time * 0.8) * 4.0;
-                kickerLight.position.z = Math.sin(time * 1.1) * 4.0;
-
-                // ── 6-Octave fBm Vertex Deformation ──
-                const positions = posAttr.array;
-                const count = posAttr.count;
-
-                for (let i = 0; i < count; i++) {
-                    const idx = i * 3;
-                    const ox = origPos[idx];
-                    const oy = origPos[idx + 1];
-                    const oz = origPos[idx + 2];
-
-                    // 1. Torsional twist along vertical Y axis:
-                    // Top and bottom vertices twist in opposite directions around the vertical pole
-                    const yNorm = oy / 1.30; // normalized height: -1 to +1
-                    const twistAngle = yNorm * currentTwist * 1.55;
-                    const cosT = Math.cos(twistAngle);
-                    const sinT = Math.sin(twistAngle);
-
-                    let tx = ox * cosT - oz * sinT;
-                    let ty = oy;
-                    let tz = ox * sinT + oz * cosT;
-
-                    // Hydrodynamic vortex waist cinch when heavily twisted
-                    if (absTwist > 0.03) {
-                        const waistPinch = 1.0 - absTwist * 0.18 * Math.cos(yNorm * (Math.PI * 0.5));
-                        tx *= waistPinch;
-                        tz *= waistPinch;
-                    }
-
-                    // 2. Silky organic fluid wave surface displacement
-                    const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
-                    const nx = tx / len;
-                    const ny = ty / len;
-                    const nz = tz / len;
-
-                    const displacement = 1.0 + fluidWave(nx, ny, nz, time);
-
-                    positions[idx] = tx * displacement;
-                    positions[idx + 1] = ty * displacement;
-                    positions[idx + 2] = tz * displacement;
-                }
-
-                posAttr.needsUpdate = true;
-                geometry.computeVertexNormals();
-
-                renderer.render(scene, camera);
-            }
-
-            animate();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ color: new THREE.Color(color), size, transparent: true, opacity });
+            return new THREE.Points(geo, mat);
         }
+        const particles = makeParticles(36, 1.8, 2.5, '#c5b8c1', 0.032, 0.65);
+        const particles2 = makeParticles(20, 1.5, 1.8, '#d97aa0', 0.024, 0.45);
+        scene.add(particles);
+        scene.add(particles2);
 
-        // Initialize 3D Blob when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init3DBlob);
-        } else {
-            init3DBlob();
-        }
+        // 7. Cinematic 7-Point Lighting Rig
+        // Key — warm rose top-right
+        const keyLight = new THREE.DirectionalLight('#ffb8d0', 2.2);
+        keyLight.position.set(5, 6, 4);
+        scene.add(keyLight);
 
-        // ───── Hide Mouse Indicator on Scroll ─────
-        const heroScroll = document.querySelector('.hero__scroll');
-        let hasScrolled = false;
+        // Rim — deep plum backlight (separation)
+        const rimLight = new THREE.DirectionalLight('#7b3568', 2.0);
+        rimLight.position.set(-6, -2, -3);
+        scene.add(rimLight);
 
-        window.addEventListener('scroll', () => {
-            if (!hasScrolled && window.scrollY > 10) {
-                hasScrolled = true;
-                if (heroScroll) heroScroll.classList.add('hidden');
-            }
-            if (hasScrolled && window.scrollY <= 10) {
-                hasScrolled = false;
-                if (heroScroll) heroScroll.classList.remove('hidden');
-            }
+        // Fill — soft lavender from below-left
+        const fillLight = new THREE.DirectionalLight('#9b6fa0', 0.9);
+        fillLight.position.set(-3, -4, 3);
+        scene.add(fillLight);
+
+        // Specular — cool ice white overhead
+        const specularLight = new THREE.PointLight('#f3f4f4', 1.5, 14);
+        specularLight.position.set(0, 5, 3);
+        scene.add(specularLight);
+
+        // Accent — rosewood front-fill
+        const accentLight = new THREE.PointLight('#853953', 1.8, 7);
+        accentLight.position.set(2, -1, 5);
+        scene.add(accentLight);
+
+        // Kicker — violet from right-rear
+        const kickerLight = new THREE.PointLight('#4a1f6e', 1.4, 9);
+        kickerLight.position.set(4, 1, -4);
+        scene.add(kickerLight);
+
+        // Ambient — near-black warm base
+        const ambientLight = new THREE.AmbientLight('#120610', 2.2);
+
+        let targetRotX = 0, targetRotY = 0;
+        let currentRotX = 0, currentRotY = 0;
+        let currentTwist = 0;
+        let twistVel = 0;
+        let vortexSpin = 0;
+        let isVisible = true;
+
+        const observer = new IntersectionObserver((entries) => {
+            isVisible = entries[0].isIntersecting;
+        }, { threshold: 0.05 });
+        observer.observe(wrapper);
+
+        window.addEventListener('mousemove', (e) => {
+            const nx = (e.clientX / window.innerWidth) * 2 - 1;
+            const ny = -(e.clientY / window.innerHeight) * 2 + 1;
+            targetRotY = nx * 0.55;
+            targetRotX = -ny * 0.42;
         }, { passive: true });
 
-        // ───── Active Rail Link Highlight on Scroll ─────
-        const sections = document.querySelectorAll('section[id]');
-        const navLinks = document.querySelectorAll('.nav-rail__link');
-        window.addEventListener('scroll', () => {
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop - 150;
-                if (window.scrollY >= sectionTop) {
-                    current = section.getAttribute('id');
-                }
-            });
-            navLinks.forEach(link => {
-                link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
-            });
-        });
-
-        // ───── Interactive Code Card (3D Tilt & Cursor Spotlight) ─────
-        const codeCard = document.getElementById('aboutCodeCard');
-        if (codeCard) {
-            codeCard.addEventListener('mousemove', (e) => {
-                const rect = codeCard.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-
-                // Update cursor spotlight custom properties
-                codeCard.style.setProperty('--card-mouse-x', `${mouseX}px`);
-                codeCard.style.setProperty('--card-mouse-y', `${mouseY}px`);
-
-                // Amplified 3D tilt calculation
-                const centerX = mouseX - rect.width / 2;
-                const centerY = mouseY - rect.height / 2;
-                const tiltX = (centerY / (rect.height / 2)) * -14;
-                const tiltY = (centerX / (rect.width / 2)) * 14;
-
-                codeCard.style.transform = `perspective(1000px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-14px) scale3d(1.035, 1.035, 1.035)`;
-            });
-
-            codeCard.addEventListener('mouseleave', () => {
-                codeCard.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease, border-color 0.5s ease';
-                codeCard.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)';
-                setTimeout(() => {
-                    codeCard.style.transition = '';
-                }, 500);
-            });
-
-            codeCard.addEventListener('mouseenter', () => {
-                codeCard.style.transition = 'transform 0.1s ease-out, box-shadow 0.3s ease, border-color 0.3s ease';
-            });
+        // ── 6-Octave fBm Fluid Wave — organic, smooth, no crinkling ──
+        function hash(n) { return Math.sin(n) * 43758.5453123; }
+        function noise3(x, y, z) {
+            const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+            const fx = x - ix, fy = y - iy, fz = z - iz;
+            const ux = fx * fx * (3 - 2 * fx),
+                  uy = fy * fy * (3 - 2 * fy),
+                  uz = fz * fz * (3 - 2 * fz);
+            const a = hash(ix + iy * 57 + iz * 113),
+                  b = hash(ix + 1 + iy * 57 + iz * 113),
+                  c = hash(ix + (iy + 1) * 57 + iz * 113),
+                  d = hash(ix + 1 + (iy + 1) * 57 + iz * 113),
+                  e = hash(ix + iy * 57 + (iz + 1) * 113),
+                  f = hash(ix + 1 + iy * 57 + (iz + 1) * 113),
+                  g = hash(ix + (iy + 1) * 57 + (iz + 1) * 113),
+                  h = hash(ix + 1 + (iy + 1) * 57 + (iz + 1) * 113);
+            return a + (b-a)*ux + (c-a)*uy + (d-a-b-c+a)*ux*uy +
+                   (e-a)*uz + (f-e-b+a)*ux*uz + (g-e-c+a)*uy*uz +
+                   (h-g-f+e-d+c+b-a)*ux*uy*uz;
+        }
+        function fbm(x, y, z) {
+            let v = 0, amp = 0.5, freq = 1.8;
+            for (let o = 0; o < 6; o++) {
+                v += amp * noise3(x * freq, y * freq, z * freq);
+                amp *= 0.5; freq *= 2.1;
+            }
+            return v;
+        }
+        function fluidWave(x, y, z, t) {
+            // Domain-warped fBm — the positions themselves are warped before sampling
+            const warpStr = 0.55;
+            const wx = x + warpStr * Math.sin(z * 1.4 + t * 0.7);
+            const wy = y + warpStr * Math.sin(x * 1.4 + t * 0.8);
+            const wz = z + warpStr * Math.sin(y * 1.4 + t * 0.6);
+            const base = fbm(wx + t * 0.18, wy + t * 0.14, wz + t * 0.16);
+            // Layered harmonic overtones for that liquid glass shimmer
+            const detail = Math.sin(x * 3.2 + t * 1.1) * 0.06
+                         + Math.cos(y * 2.8 - t * 0.9) * 0.05
+                         + Math.sin(z * 3.5 + t * 0.75) * 0.04;
+            return (base - 0.5) * 0.38 + detail;
         }
 
-        const copyBtn = document.getElementById('copyCodeBtn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => {
-                const codeSnippet = `const aditya = {
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!isVisible) return;
+
+            const dt = Math.min(clock.getDelta(), 0.08);
+            const time = clock.getElapsedTime() * 0.30;  // slightly slower = more majestic
+
+            // Sync with global cursor tracker & circling gesture detector
+            const trackerState = cursorTracker.update(dt);
+            const circlingIntensity = trackerState.circlingIntensity;
+
+            // ── Frame-rate independent smooth rotation damping ──
+            const lerpFactor = 1.0 - Math.exp(-4.8 * dt);
+            currentRotX += (targetRotX - currentRotX) * lerpFactor;
+            currentRotY += (targetRotY - currentRotY) * lerpFactor;
+
+            // ── Dynamic Vortex Twist Deformation Physics (Spring-Damper) ──
+            const targetTwist = circlingIntensity * 1.25;
+            const twistDiff = targetTwist - currentTwist;
+            twistVel += (twistDiff * 14.0 - twistVel * 5.5) * dt;
+            currentTwist += twistVel * dt;
+
+            // ── Rotational Vortex Spin Acceleration ──
+            vortexSpin += currentTwist * 0.60 * dt;
+            vortexSpin *= Math.exp(-1.6 * dt);
+
+            blobMesh.rotation.x = currentRotX + time * 0.07;
+            blobMesh.rotation.y = currentRotY + time * 0.10 + vortexSpin;
+            blobMesh.rotation.z = currentTwist * 0.28;
+
+            // Shell counter-rotates gently for silky parallax depth & crystal refraction
+            shellMesh.rotation.x = -(currentRotX * 0.25) + time * 0.03;
+            shellMesh.rotation.y = -(currentRotY * 0.25) + time * 0.05 - vortexSpin * 0.4;
+            shellMesh.rotation.z = -currentTwist * 0.16;
+
+            // ── Gyroscope Rings React to Vortex Swirl ──
+            const swirlFactor = 1.0 + Math.abs(currentTwist) * 2.6;
+            ring1.rotation.z += (0.005 * swirlFactor) + currentTwist * 0.022;
+            ring1.rotation.y += 0.003 * swirlFactor;
+            ring2.rotation.x += (0.004 * swirlFactor) - currentTwist * 0.016;
+            ring2.rotation.z -= 0.005 * swirlFactor;
+            ring3.rotation.y += (0.006 * swirlFactor) + currentTwist * 0.024;
+            ring3.rotation.x -= 0.003 * swirlFactor;
+
+            // Orbiting Particles accelerate inside the vortex
+            particles.rotation.y -= (0.002 * swirlFactor) + currentTwist * 0.015;
+            particles.rotation.x += 0.001 * swirlFactor;
+            particles2.rotation.y += (0.003 * swirlFactor) + currentTwist * 0.018;
+            particles2.rotation.z -= 0.001 * swirlFactor;
+
+            const absTwist = Math.abs(currentTwist);
+
+            // ── Slow-breathing emissive pulse — feels alive ──
+            const breathe = Math.sin(time * 0.8) * 0.5 + 0.5;  // 0→1
+            const pulse = 0.18 + breathe * 0.22 + Math.sin(time * 3.1) * 0.04 + absTwist * 0.42;
+            material.emissiveIntensity = pulse;
+
+            // ── Dynamic iridescence sheen surge ──
+            material.iridescence = 0.60 + Math.sin(time * 0.75) * 0.25 + absTwist * 0.35;
+            material.sheenRoughness = 0.20 + breathe * 0.16;
+
+            // ── Accent light orbit ──
+            accentLight.position.x = Math.sin(time * 1.2) * 3.5;
+            accentLight.position.y = Math.cos(time * 0.9) * 2.5;
+            kickerLight.position.x = Math.cos(time * 0.8) * 4.0;
+            kickerLight.position.z = Math.sin(time * 1.1) * 4.0;
+
+            // ── Domain-Warped fBm Vertex Deformation ──
+            const positions = posAttr.array;
+            const count = posAttr.count;
+
+            for (let i = 0; i < count; i++) {
+                const idx = i * 3;
+                const ox = origPos[idx];
+                const oy = origPos[idx + 1];
+                const oz = origPos[idx + 2];
+
+                // Torsional twist along vertical Y axis
+                const yNorm = oy / 1.30;
+                const twistAngle = yNorm * currentTwist * 1.55;
+                const cosT = Math.cos(twistAngle);
+                const sinT = Math.sin(twistAngle);
+
+                let tx = ox * cosT - oz * sinT;
+                let ty = oy;
+                let tz = ox * sinT + oz * cosT;
+
+                // Vortex waist cinch
+                if (absTwist > 0.03) {
+                    const waistPinch = 1.0 - absTwist * 0.18 * Math.cos(yNorm * (Math.PI * 0.5));
+                    tx *= waistPinch;
+                    tz *= waistPinch;
+                }
+
+                const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
+                const nx = tx / len;
+                const ny = ty / len;
+                const nz = tz / len;
+
+                // Domain-warped fBm displacement — rich, organic, glass-liquid surface
+                const wave = fluidWave(nx, ny, nz, time);
+                const radius = 1.30 + wave;
+                positions[idx]     = nx * radius;
+                positions[idx + 1] = ny * radius;
+                positions[idx + 2] = nz * radius;
+            }
+
+            posAttr.needsUpdate = true;
+            blobMesh.geometry.computeVertexNormals();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+        })();
+
+        // ───── Hide Mouse Indicator on Scroll ─────
+                const heroScroll = document.querySelector('.hero__scroll');
+                let hasScrolled = false;
+
+                window.addEventListener('scroll', () => {
+                    if (!hasScrolled && window.scrollY > 10) {
+                        hasScrolled = true;
+                        if (heroScroll) heroScroll.classList.add('hidden');
+                    }
+                    if (hasScrolled && window.scrollY <= 10) {
+                        hasScrolled = false;
+                        if (heroScroll) heroScroll.classList.remove('hidden');
+                    }
+                }, { passive: true });
+
+                // ───── Active Rail Link Highlight on Scroll ─────
+                const sections = document.querySelectorAll('section[id]');
+                const navLinks = document.querySelectorAll('.nav-rail__link');
+                window.addEventListener('scroll', () => {
+                    let current = '';
+                    sections.forEach(section => {
+                        const sectionTop = section.offsetTop - 150;
+                        if (window.scrollY >= sectionTop) {
+                            current = section.getAttribute('id');
+                        }
+                    });
+                    navLinks.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
+                    });
+                });
+
+                // ───── Interactive Code Card (3D Tilt & Cursor Spotlight) ─────
+                const codeCard = document.getElementById('aboutCodeCard');
+                if (codeCard) {
+                    codeCard.addEventListener('mousemove', (e) => {
+                        const rect = codeCard.getBoundingClientRect();
+                        const mouseX = e.clientX - rect.left;
+                        const mouseY = e.clientY - rect.top;
+
+                        // Update cursor spotlight custom properties
+                        codeCard.style.setProperty('--card-mouse-x', `${mouseX}px`);
+                        codeCard.style.setProperty('--card-mouse-y', `${mouseY}px`);
+
+                        // Amplified 3D tilt calculation
+                        const centerX = mouseX - rect.width / 2;
+                        const centerY = mouseY - rect.height / 2;
+                        const tiltX = (centerY / (rect.height / 2)) * -14;
+                        const tiltY = (centerX / (rect.width / 2)) * 14;
+
+                        codeCard.style.transform = `perspective(1000px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) translateY(-14px) scale3d(1.035, 1.035, 1.035)`;
+                    });
+
+                    codeCard.addEventListener('mouseleave', () => {
+                        codeCard.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease, border-color 0.5s ease';
+                        codeCard.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)';
+                        setTimeout(() => {
+                            codeCard.style.transition = '';
+                        }, 500);
+                    });
+
+                    codeCard.addEventListener('mouseenter', () => {
+                        codeCard.style.transition = 'transform 0.1s ease-out, box-shadow 0.3s ease, border-color 0.3s ease';
+                    });
+                }
+
+                const copyBtn = document.getElementById('copyCodeBtn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', () => {
+                        const codeSnippet = `const aditya = {
   name: "Aditya Bagdwal",
   role: "CS Student & Freelancer",
   education: "B.Tech in Computer Science",
@@ -1007,273 +883,303 @@
   ],
   hireable: true
 };`;
-                navigator.clipboard.writeText(codeSnippet).then(() => {
-                    const copyText = copyBtn.querySelector('.copy-text');
-                    copyBtn.classList.add('copied');
-                    copyText.textContent = 'Copied!';
-                    setTimeout(() => {
-                        copyBtn.classList.remove('copied');
-                        copyText.textContent = 'Copy';
-                    }, 2000);
-                });
-            });
-        }
-
-        // ───── Contact Form Submission (Backend with Smart Fallback) ─────
-        // ───── Supabase Helper ─────
-        function getSupabaseClient() {
-            if (supabaseClient) return supabaseClient;
-            const lib = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
-            if (lib && SUPABASE_URL && SUPABASE_ANON_KEY) {
-                try {
-                    supabaseClient = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                } catch (e) {
-                    console.error('Error creating Supabase client:', e);
+                        navigator.clipboard.writeText(codeSnippet).then(() => {
+                            const copyText = copyBtn.querySelector('.copy-text');
+                            copyBtn.classList.add('copied');
+                            copyText.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyBtn.classList.remove('copied');
+                                copyText.textContent = 'Copy';
+                            }, 2000);
+                        });
+                    });
                 }
-            }
-            return supabaseClient;
-        }
 
-        // ───── Contact Form Submission ─────
-        const contactForm = document.getElementById('contactForm');
-        const contactSubmitBtn = document.getElementById('contactSubmitBtn');
-        const contactFormStatus = document.getElementById('contactFormStatus');
-
-        if (contactForm) {
-            contactForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const origBtnContent = contactSubmitBtn.innerHTML;
-
-                contactSubmitBtn.disabled = true;
-                contactSubmitBtn.innerHTML = '<span>Sending...</span>';
-                contactFormStatus.className = 'contact__form-status';
-                contactFormStatus.textContent = '';
-
-                const payload = {
-                    name: document.getElementById('contact-name').value.trim(),
-                    email: document.getElementById('contact-user-email').value.trim(),
-                    subject: document.getElementById('contact-subject').value.trim() || 'Portfolio Inquiry',
-                    message: document.getElementById('contact-message').value.trim()
-                };
-
-                try {
-                    const client = getSupabaseClient();
-                    if (!client) {
-                        throw new Error('Supabase client not initialized. Check internet connection or Supabase keys.');
+                // ───── Contact Form Submission (Backend with Smart Fallback) ─────
+                // ───── Supabase Helper ─────
+                function getSupabaseClient() {
+                    if (supabaseClient) return supabaseClient;
+                    const lib = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+                    if (lib && SUPABASE_URL && SUPABASE_ANON_KEY) {
+                        try {
+                            supabaseClient = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        } catch (e) {
+                            console.error('Error creating Supabase client:', e);
+                        }
                     }
-
-                    const { data, error } = await client
-                        .from('messages')
-                        .insert([{
-                            name: payload.name,
-                            email: payload.email,
-                            subject: payload.subject,
-                            message: payload.message
-                        }]);
-
-                    if (error) {
-                        console.error('Supabase Error:', error);
-                        throw new Error(error.message || 'Database insert failed.');
-                    }
-
-                    // 2. Instant Email Notification to your inbox
-                    try {
-                        fetch('https://formsubmit.co/ajax/bagdwaladitya17@gmail.com', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                name: payload.name,
-                                email: payload.email,
-                                _subject: `[Portfolio Inquiry] ${payload.subject} (from ${payload.name})`,
-                                message: payload.message,
-                                _captcha: 'false'
-                            })
-                        }).catch(e => console.warn('Email notify error:', e));
-                    } catch (notifyErr) {
-                        console.warn('Email notify error:', notifyErr);
-                    }
-
-                    // Success!
-                    contactFormStatus.textContent = '✓ Message delivered, wait for the response!';
-                    contactFormStatus.classList.add('success');
-                    contactForm.reset();
-
-                } catch (err) {
-                    console.error('Contact Form Error:', err);
-                    contactFormStatus.textContent = 'Error: ' + (err.message || 'Unable to deliver message.');
-                    contactFormStatus.classList.add('error');
-                } finally {
-                    contactSubmitBtn.disabled = false;
-                    contactSubmitBtn.innerHTML = origBtnContent;
+                    return supabaseClient;
                 }
-            });
-        }
 
-        // ───── Pixel-Particle Cursor Cloud (Exact Match to Design) ─────
-        (function initCursorBlob() {
-            let canvas = document.getElementById('cursorBlobCanvas');
-            if (!canvas) {
-                canvas = document.createElement('canvas');
-                canvas.id = 'cursorBlobCanvas';
-                document.body.appendChild(canvas);
-            }
-            canvas.style.position = 'fixed';
-            canvas.style.top = '0';
-            canvas.style.left = '0';
-            canvas.style.width = '100vw';
-            canvas.style.height = '100vh';
-            canvas.style.pointerEvents = 'none';
-            canvas.style.zIndex = '9999';
+                // ───── Contact Form Submission ─────
+                const contactForm = document.getElementById('contactForm');
+                const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+                const contactFormStatus = document.getElementById('contactFormStatus');
 
-            const ctx = canvas.getContext('2d');
-            let dpr = window.devicePixelRatio || 1;
+                if (contactForm) {
+                    contactForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const origBtnContent = contactSubmitBtn.innerHTML;
 
-            function resize() {
-                dpr = window.devicePixelRatio || 1;
-                canvas.width = Math.round(window.innerWidth * dpr);
-                canvas.height = Math.round(window.innerHeight * dpr);
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.scale(dpr, dpr);
-            }
-            resize();
-            window.addEventListener('resize', resize);
+                        contactSubmitBtn.disabled = true;
+                        contactSubmitBtn.innerHTML = '<span>Sending...</span>';
+                        contactFormStatus.className = 'contact__form-status';
+                        contactFormStatus.textContent = '';
 
-            // Smoothed cursor position linked to cursorTracker
-            let cx = cursorTracker.mx;
-            let cy = cursorTracker.my;
-            let expansion = 0.0;
-            let prevFrameTime = performance.now();
+                        const payload = {
+                            name: document.getElementById('contact-name').value.trim(),
+                            email: document.getElementById('contact-user-email').value.trim(),
+                            subject: document.getElementById('contact-subject').value.trim() || 'Portfolio Inquiry',
+                            message: document.getElementById('contact-message').value.trim()
+                        };
 
-            // Box-Muller Gaussian sample
-            function gauss() {
-                let u = 0, v = 0;
-                while (!u) u = Math.random();
-                while (!v) v = Math.random();
-                return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-            }
+                        try {
+                            const client = getSupabaseClient();
+                            if (!client) {
+                                throw new Error('Supabase client not initialized. Check internet connection or Supabase keys.');
+                            }
 
-            const COUNT = 360;
-            const SW = 95;  // horizontal sigma (px) - compact sleek scale
-            const SH = 44;  // vertical sigma (px)
+                            const { data, error } = await client
+                                .from('messages')
+                                .insert([{
+                                    name: payload.name,
+                                    email: payload.email,
+                                    subject: payload.subject,
+                                    message: payload.message
+                                }]);
 
-            const particles = Array.from({ length: COUNT }, () => {
-                let ox, oy, nd;
-                // Keep particles tightly bounded within the elliptical disc silhouette
-                do {
-                    ox = gauss() * SW;
-                    oy = gauss() * SH;
-                    nd = Math.sqrt((ox / SW) ** 2 + (oy / SH) ** 2);
-                } while (nd > 2.35);
+                            if (error) {
+                                console.error('Supabase Error:', error);
+                                throw new Error(error.message || 'Database insert failed.');
+                            }
 
-                // Core glows brightest and clusters into a solid white centre
-                const bright = Math.max(0.12, 1 - (nd / 2.35) * 0.85);
+                            // 2. Instant Email Notification to your inbox
+                            try {
+                                fetch('https://formsubmit.co/ajax/bagdwaladitya17@gmail.com', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        name: payload.name,
+                                        email: payload.email,
+                                        _subject: `[Portfolio Inquiry] ${payload.subject} (from ${payload.name})`,
+                                        message: payload.message,
+                                        _captcha: 'false'
+                                    })
+                                }).catch(e => console.warn('Email notify error:', e));
+                            } catch (notifyErr) {
+                                console.warn('Email notify error:', notifyErr);
+                            }
 
-                return {
-                    x: cx + ox,
-                    y: cy + oy,
-                    ox,
-                    oy,
-                    nd,
-                    size: 1.1 + Math.random() * 1.8,
-                    bright,
-                    phase: Math.random() * Math.PI * 2,
-                    speed: 0.35 + Math.random() * 0.55,
-                    dox: (Math.random() - 0.5) * 20, // oscillation offset X
-                    doy: (Math.random() - 0.5) * 12, // oscillation offset Y
-                    lag: 0.015 + Math.random() * 0.045
-                };
-            });
+                            // Success!
+                            contactFormStatus.textContent = '✓ Message delivered, wait for the response!';
+                            contactFormStatus.classList.add('success');
+                            contactForm.reset();
 
-            let t = 0;
-
-            function frame() {
-                requestAnimationFrame(frame);
-                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-
-                const now = performance.now();
-                const dt = Math.min(0.08, Math.max(0.001, (now - prevFrameTime) / 1000));
-                prevFrameTime = now;
-
-                const mx = cursorTracker.mx;
-                const my = cursorTracker.my;
-                const circlingIntensity = cursorTracker.getCirclingIntensity();
-
-                // Movement velocity & expansion
-                const isMoving = (now - cursorTracker.lastMoveTime < 160);
-                const targetExpansion = isMoving ? Math.min(1.0, 0.32 + Math.abs(circlingIntensity) * 0.45) : 0.0;
-                const rate = targetExpansion > expansion ? 0.14 : 0.045;
-                expansion += (targetExpansion - expansion) * rate;
-
-                // Ultra-smooth follow cursor
-                const followRate = 1.0 - Math.exp(-11.0 * dt);
-                cx += (mx - cx) * followRate;
-                cy += (my - cy) * followRate;
-
-                t += 0.009;
-
-                const isLight = document.body.classList.contains('light-mode');
-
-                // Dynamic scale: compact contracted (~34%) when cursor is still, expanded (~78%) when moving
-                const curScale = 0.34 + 0.44 * expansion;
-                const driftMult = 0.28 + 0.55 * expansion;
-                const ease = 0.075 + (1 - expansion) * 0.040;
-
-                for (let i = 0; i < particles.length; i++) {
-                    const p = particles[i];
-
-                    // Gentle harmonic drift (tighter when contracted)
-                    const driftX = Math.sin(t * p.speed + p.phase) * p.dox * driftMult;
-                    const driftY = Math.cos(t * p.speed + p.phase * 0.71) * p.doy * driftMult;
-
-                    // Inertial trailing behind cursor while expanding
-                    const trailX = (cx - mx) * p.lag * 2.0 * expansion;
-                    const trailY = (cy - my) * p.lag * 2.0 * expansion;
-
-                    // Circling vortex swirl twist around cursor
-                    let effOx = p.ox;
-                    let effOy = p.oy;
-                    if (Math.abs(circlingIntensity) > 0.02) {
-                        const swirlRad = circlingIntensity * 0.52 * Math.max(0.2, 1.0 - (p.nd / 2.35) * 0.55);
-                        const cosS = Math.cos(swirlRad);
-                        const sinS = Math.sin(swirlRad);
-                        effOx = p.ox * cosS - p.oy * sinS;
-                        effOy = p.ox * sinS + p.oy * cosS;
-                    }
-
-                    // Target position with dynamic contraction / detraction scale
-                    const tx = cx + (effOx * curScale) + driftX + trailX;
-                    const ty = cy + (effOy * curScale) + driftY + trailY;
-
-                    p.x += (tx - p.x) * ease;
-                    p.y += (ty - p.y) * ease;
-
-                    // Subtle natural twinkle
-                    const twinkle = 0.78 + Math.sin(t * 3.8 + p.phase) * 0.18;
-                    const alpha = p.bright * twinkle;
-                    if (alpha < 0.04) continue;
-
-                    if (isLight) {
-                        ctx.fillStyle = `rgba(44, 44, 44, ${alpha.toFixed(2)})`;
-                    } else {
-                        const g = Math.round(220 + p.bright * 35);
-                        ctx.fillStyle = `rgba(${g}, ${g}, ${g}, ${alpha.toFixed(2)})`;
-                    }
-
-                    // Crisp integer pixel alignment for the authentic square pixel look
-                    ctx.fillRect(
-                        Math.round(p.x - p.size * 0.5),
-                        Math.round(p.y - p.size * 0.5),
-                        Math.ceil(p.size),
-                        Math.ceil(p.size)
-                    );
+                        } catch (err) {
+                            console.error('Contact Form Error:', err);
+                            contactFormStatus.textContent = 'Error: ' + (err.message || 'Unable to deliver message.');
+                            contactFormStatus.classList.add('error');
+                        } finally {
+                            contactSubmitBtn.disabled = false;
+                            contactSubmitBtn.innerHTML = origBtnContent;
+                        }
+                    });
                 }
-            }
 
-            frame();
-        })();
+                // ───── Smooth Flowing Particle Cursor Cloud ─────
+                (function initCursorBlob() {
+                    let canvas = document.getElementById('cursorBlobCanvas');
+                    if (!canvas) {
+                        canvas = document.createElement('canvas');
+                        canvas.id = 'cursorBlobCanvas';
+                        document.body.appendChild(canvas);
+                    }
+                    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;';
+
+                    const ctx = canvas.getContext('2d');
+                    let dpr = window.devicePixelRatio || 1;
+
+                    function resize() {
+                        dpr = window.devicePixelRatio || 1;
+                        canvas.width  = Math.round(window.innerWidth  * dpr);
+                        canvas.height = Math.round(window.innerHeight * dpr);
+                        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    }
+                    resize();
+                    window.addEventListener('resize', resize);
+
+                    // ── Smoothed cursor position ──
+                    let cx = cursorTracker.mx, cy = cursorTracker.my;
+                    let vx = 0, vy = 0;          // cursor velocity for spread
+                    let spread = 0;               // velocity-driven expansion
+                    let prevMx = cx, prevMy = cy;
+                    let prevFrameTime = performance.now();
+
+                    // Box-Muller Gaussian
+                    function gauss() {
+                        let u = 0, v = 0;
+                        while (!u) u = Math.random();
+                        while (!v) v = Math.random();
+                        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+                    }
+
+                    const COUNT = 320;
+                    const SW = 88, SH = 40;   // resting ellipse radii
+
+                    const particles = Array.from({ length: COUNT }, (_, i) => {
+                        let ox, oy, nd;
+                        do {
+                            ox = gauss() * SW;
+                            oy = gauss() * SH;
+                            nd = Math.hypot(ox / SW, oy / SH);
+                        } while (nd > 2.2);
+
+                        const bright = Math.max(0.08, 1 - (nd / 2.2) * 0.88);
+                        const isCore = nd < 0.35;
+
+                        return {
+                            x: cx + ox, y: cy + oy,
+                            ox, oy, nd,
+                            // Circular base size — softer & rounder
+                            r: isCore
+                                ? 2.2 + Math.random() * 1.4
+                                : 0.9 + Math.random() * 1.8,
+                            bright,
+                            isCore,
+                            // Per-particle organic drift offsets
+                            phase:  Math.random() * Math.PI * 2,
+                            phaseY: Math.random() * Math.PI * 2,
+                            speed:  0.28 + Math.random() * 0.50,
+                            dox:    (Math.random() - 0.5) * 22,
+                            doy:    (Math.random() - 0.5) * 13,
+                            // Inertia: core tracks fast, outer drifts slow
+                            lag:    isCore ? 0.008 + Math.random() * 0.012
+                                          : 0.022 + Math.random() * 0.060
+                        };
+                    });
+
+                    let t = 0;
+
+                    function frame() {
+                        requestAnimationFrame(frame);
+
+                        const now = performance.now();
+                        const dt  = Math.min(0.06, Math.max(0.001, (now - prevFrameTime) / 1000));
+                        prevFrameTime = now;
+
+                        const mx = cursorTracker.mx;
+                        const my = cursorTracker.my;
+                        const circlingIntensity = cursorTracker.getCirclingIntensity();
+                        const isMoving = (now - cursorTracker.lastMoveTime < 180);
+
+                        // ── Cursor velocity (exponential smoothing) ──
+                        const rawVx = (mx - prevMx) / Math.max(dt, 0.001);
+                        const rawVy = (my - prevMy) / Math.max(dt, 0.001);
+                        const velSmooth = 1.0 - Math.exp(-8 * dt);
+                        vx += (rawVx - vx) * velSmooth;
+                        vy += (rawVy - vy) * velSmooth;
+                        prevMx = mx; prevMy = my;
+                        const speed = Math.hypot(vx, vy);
+
+                        // ── Velocity-driven spread (0→1) ──
+                        const targetSpread = isMoving
+                            ? Math.min(1.0, speed / 420 + Math.abs(circlingIntensity) * 0.5)
+                            : 0.0;
+                        const spreadRate = targetSpread > spread ? 0.18 : 0.035;
+                        spread += (targetSpread - spread) * spreadRate;
+
+                        // ── Smooth cursor follow (exponential) ──
+                        const followRate = 1.0 - Math.exp(-10 * dt);
+                        cx += (mx - cx) * followRate;
+                        cy += (my - cy) * followRate;
+
+                        t += dt * 0.55;   // time accumulator
+
+                        const isLight = document.body.classList.contains('light-mode');
+                        const curScale  = 0.30 + 0.50 * spread;
+                        const driftMult = 0.22 + 0.60 * spread;
+                        const ease      = 0.055 + (1 - spread) * 0.038;
+
+                        // Clear with slight motion-blur trail for a fluid streak look
+                        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+                        for (let i = 0; i < particles.length; i++) {
+                            const p = particles[i];
+
+                            // Organic harmonic drift
+                            const driftX = Math.sin(t * p.speed + p.phase)  * p.dox * driftMult;
+                            const driftY = Math.cos(t * p.speed + p.phaseY) * p.doy * driftMult;
+
+                            // Velocity-driven inertial trail — outer particles lag more
+                            const trailStr = p.lag * 2.8 * spread;
+                            const trailX   = (cx - mx) * trailStr;
+                            const trailY   = (cy - my) * trailStr;
+
+                            // Circling vortex swirl
+                            let effOx = p.ox, effOy = p.oy;
+                            if (Math.abs(circlingIntensity) > 0.015) {
+                                const swirlRad = circlingIntensity * 0.65
+                                    * Math.max(0.15, 1.0 - (p.nd / 2.2) * 0.60);
+                                const cosS = Math.cos(swirlRad), sinS = Math.sin(swirlRad);
+                                effOx = p.ox * cosS - p.oy * sinS;
+                                effOy = p.ox * sinS + p.oy * cosS;
+                            }
+
+                            const tx = cx + effOx * curScale + driftX + trailX;
+                            const ty = cy + effOy * curScale + driftY + trailY;
+
+                            // Exponential spring easing — core snaps, outer glides
+                            const k = 1.0 - Math.exp(-ease / dt * 0.016);
+                            p.x += (tx - p.x) * Math.min(k + ease, 0.30);
+                            p.y += (ty - p.y) * Math.min(k + ease, 0.30);
+
+                            // Living twinkle
+                            const twinkle = 0.72 + Math.sin(t * 4.2 + p.phase) * 0.20
+                                          + Math.cos(t * 2.1 + p.phaseY) * 0.08;
+                            const alpha = Math.min(1, p.bright * twinkle * (0.55 + spread * 0.45));
+                            if (alpha < 0.03) continue;
+
+                            // ── Draw as a soft radial gradient circle ──
+                            const r = p.r * (1 + spread * 0.5);
+                            const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 1.6);
+
+                            if (p.isCore) {
+                                // Bright white/rose hot core
+                                const cAlpha = Math.min(1, alpha * 1.3);
+                                if (isLight) {
+                                    grd.addColorStop(0,   `rgba(80,40,60,${cAlpha})`);
+                                    grd.addColorStop(0.4, `rgba(60,30,50,${(cAlpha * 0.6).toFixed(2)})`);
+                                    grd.addColorStop(1,   `rgba(40,20,40,0)`);
+                                } else {
+                                    grd.addColorStop(0,   `rgba(255,230,240,${cAlpha})`);
+                                    grd.addColorStop(0.35,`rgba(230,180,210,${(cAlpha * 0.65).toFixed(2)})`);
+                                    grd.addColorStop(1,   `rgba(160,100,140,0)`);
+                                }
+                            } else {
+                                // Outer particles — cool silver-rose glow
+                                const g = Math.round(200 + p.bright * 45);
+                                const rC = Math.round(210 + p.bright * 30);
+                                const b  = Math.round(190 + p.bright * 40);
+                                if (isLight) {
+                                    grd.addColorStop(0,   `rgba(50,30,45,${alpha.toFixed(2)})`);
+                                    grd.addColorStop(1,   `rgba(40,20,35,0)`);
+                                } else {
+                                    grd.addColorStop(0,   `rgba(${rC},${g},${b},${alpha.toFixed(2)})`);
+                                    grd.addColorStop(1,   `rgba(${rC},${g},${b},0)`);
+                                }
+                            }
+
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, r * 1.6, 0, Math.PI * 2);
+                            ctx.fillStyle = grd;
+                            ctx.fill();
+                        }
+                    }
+
+                    frame();
+                })();
     </script>
 </body>
 
