@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <!-- Three.js 3D WebGL Library for Hyper-Realistic Fluid Instrument -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body>
@@ -90,7 +92,10 @@
                 </div>
             </div>
 
-
+            <!-- Hero 3D Fluid Blob (Interactive Instrument) -->
+            <div class="hero__blob-wrapper" id="heroBlobWrapper" aria-label="Interactive 3D Fluid Instrument">
+                <div class="hero__blob-glow"></div>
+            </div>
 
             <!-- Scroll Indicator -->
             <div class="hero__scroll">
@@ -446,362 +451,608 @@
             }
         }, { passive: true });
 
-        // ───── 3D Fluid Blob (Three.js) ─────
+        // ───── 3D Hyper-Realistic Fluid Instrument Blob (Inspired by jamiemckaye.com) ─────
         (function initThreeBlob() {
             const wrapper = document.getElementById('heroBlobWrapper') || document.querySelector('.hero__blob-wrapper');
             if (!wrapper || typeof THREE === 'undefined') return;
 
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setSize(wrapper.clientWidth || 460, wrapper.clientHeight || 460);
+            // 1. High-Precision Physical WebGL Renderer
+            const renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true,
+                powerPreference: 'high-performance',
+                stencil: false
+            });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            const initialW = wrapper.clientWidth || 460;
+            const initialH = wrapper.clientHeight || 460;
+            renderer.setSize(initialW, initialH, false);
             renderer.outputColorSpace = THREE.SRGBColorSpace;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.1;
+            renderer.toneMappingExposure = 1.22;
+            renderer.domElement.className = 'hero__blob-canvas';
             wrapper.appendChild(renderer.domElement);
 
-            window.addEventListener('resize', () => {
-                const w = wrapper.clientWidth || 460;
-                const h = wrapper.clientHeight || 460;
-                renderer.setSize(w, h);
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(40, initialW / initialH, 0.1, 100);
+            camera.position.set(0, 0, 5.2);
+
+            const updateSize = () => {
+                const rect = wrapper.getBoundingClientRect();
+                const w = Math.max(rect.width || wrapper.clientWidth || 300, 200);
+                const h = Math.max(rect.height || wrapper.clientHeight || 300, 200);
+                renderer.setSize(w, h, false);
                 camera.aspect = w / h;
                 camera.updateProjectionMatrix();
-            });
+            };
+            window.addEventListener('resize', updateSize);
+            setTimeout(updateSize, 120);
 
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-            camera.position.set(0, 0, 5);
+            // 2. Procedural Studio HDRI Environment Map Generator (Key to Hyper-Realism)
+            const pmremGenerator = new THREE.PMREMGenerator(renderer);
+            pmremGenerator.compileEquirectangularShader();
 
-            // 1. Icosphere blob geometry
-            const blobGeo = new THREE.IcosahedronGeometry(1.30, 80);
+            const envScene = new THREE.Scene();
+            envScene.background = new THREE.Color('#151317');
+
+            // Key Overhead Diffuse Softbox
+            const softbox = new THREE.Mesh(
+                new THREE.PlaneGeometry(16, 16),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffffff') })
+            );
+            softbox.position.set(0, 9, 2);
+            softbox.rotation.x = Math.PI / 2;
+            envScene.add(softbox);
+
+            // Rosewood Studio Striplight (Liquid Chrome reflections)
+            const stripRosewood = new THREE.Mesh(
+                new THREE.PlaneGeometry(4, 22),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color('#d4628a') })
+            );
+            stripRosewood.position.set(-9, 2, -1);
+            stripRosewood.rotation.y = Math.PI / 3;
+            envScene.add(stripRosewood);
+
+            // Deep Plum Secondary Striplight
+            const stripPlum = new THREE.Mesh(
+                new THREE.PlaneGeometry(5, 22),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color('#94427b') })
+            );
+            stripPlum.position.set(9, -2, 3);
+            stripPlum.rotation.y = -Math.PI / 3;
+            envScene.add(stripPlum);
+
+            // Titanium Cold Rim Strip
+            const stripRim = new THREE.Mesh(
+                new THREE.PlaneGeometry(10, 8),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color('#e5eaf2') })
+            );
+            stripRim.position.set(0, -7, -6);
+            stripRim.rotation.x = -Math.PI / 3;
+            envScene.add(stripRim);
+
+            // Warm Specular Pinhole Dot
+            const pinhole = new THREE.Mesh(
+                new THREE.SphereGeometry(1.6, 16, 16),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff4e8') })
+            );
+            pinhole.position.set(3, 5, 6);
+            envScene.add(pinhole);
+
+            const envMap = pmremGenerator.fromScene(envScene).texture;
+            scene.environment = envMap;
+
+            // 3. Fluid Blob Geometry (High-Density Smooth Icosphere)
+            const blobGeo = new THREE.IcosahedronGeometry(1.35, 60);
             const posAttr = blobGeo.getAttribute('position');
             const origPos = Float32Array.from(posAttr.array);
+            const vertexCount = posAttr.count;
 
-            // 2. Shell — translucent deep-plum halo shell
-            const shellGeo = new THREE.IcosahedronGeometry(1.60, 6);
-            const shellMat = new THREE.MeshPhysicalMaterial({
-                color:            new THREE.Color('#612D53'),
-                emissive:         new THREE.Color('#853953'),
-                emissiveIntensity: 0.08,
-                roughness:        0.0,
-                metalness:        0.4,
-                clearcoat:        1.0,
-                transparent:      true,
-                opacity:          0.08,
-                side:             THREE.BackSide
-            });
-            const shellMesh = new THREE.Mesh(shellGeo, shellMat);
-            scene.add(shellMesh);
-
-            // 3. Blob — liquid rosewood chrome with plum depth
+            // 4. Hyper-Realistic Fluid Material (Molten Rosewood Liquid Metal with Plum Depth)
             const material = new THREE.MeshPhysicalMaterial({
-                // Base: mid-rosewood so it reads clearly against dark bg
-                color:                   new THREE.Color('#9B4468'),
-                emissive:                new THREE.Color('#612D53'),
-                emissiveIntensity:       0.22,
-                roughness:               0.03,   // near-mirror polish
-                metalness:               0.18,
-                clearcoat:               1.0,
-                clearcoatRoughness:      0.02,
-                reflectivity:            0.95,
-                envMapIntensity:         1.4,
-                // Iridescence — shifts rose ↔ violet ↔ ice
-                iridescence:             0.85,
-                iridescenceIOR:          1.9,
-                iridescenceThicknessRange: [100, 600],
-                // Sheen — velvet rim in pale silver
-                sheen:                   0.65,
-                sheenColor:              new THREE.Color('#c5b8c1'),  // --text-silver
-                sheenRoughness:          0.22,
-                // Subtle crystal transmission
-                transmission:            0.04,
-                thickness:               0.5,
-                ior:                     1.48,
-                flatShading:             false
+                color:                     new THREE.Color('#a3446b'),
+                emissive:                  new THREE.Color('#461836'),
+                emissiveIntensity:         0.34,
+                roughness:                 0.038,
+                metalness:                 0.54,
+                clearcoat:                 1.0,
+                clearcoatRoughness:        0.025,
+                reflectivity:              0.98,
+                envMapIntensity:           1.95,
+                // Optical Thin-Film Iridescence (Chromatic Dispersion)
+                iridescence:               0.92,
+                iridescenceIOR:            1.72,
+                iridescenceThicknessRange: [130, 580],
+                // Fine Velvet Sheen Rim
+                sheen:                     0.85,
+                sheenColor:                new THREE.Color('#f0e4ec'),
+                sheenRoughness:            0.16,
+                // Internal Crystal Refraction
+                transmission:              0.14,
+                thickness:                 1.35,
+                ior:                       1.52,
+                attenuationColor:          new THREE.Color('#612D53'),
+                attenuationDistance:       1.0
             });
             const blobMesh = new THREE.Mesh(blobGeo, material);
             scene.add(blobMesh);
 
+            // 5. Bioluminescent Floating Inner Core
+            const coreGeo = new THREE.IcosahedronGeometry(0.72, 32);
+            const coreMat = new THREE.MeshStandardMaterial({
+                color:             new THREE.Color('#853953'),
+                emissive:          new THREE.Color('#b54972'),
+                emissiveIntensity: 0.85,
+                roughness:         0.22,
+                metalness:         0.4
+            });
+            const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+            scene.add(coreMesh);
 
-            // 4. Orbiting Gyroscope Halo Rings
-            const ringGeo1 = new THREE.TorusGeometry(1.88, 0.010, 24, 160);
-            const ringMat1 = new THREE.MeshPhysicalMaterial({
-                color:             new THREE.Color('#853953'),  // --teal
+            // 6. Translucent Atmospheric Halo Shell
+            const shellGeo = new THREE.IcosahedronGeometry(1.66, 8);
+            const shellMat = new THREE.MeshPhysicalMaterial({
+                color:             new THREE.Color('#612D53'),
                 emissive:          new THREE.Color('#853953'),
-                emissiveIntensity: 0.55,
-                roughness:         0.0,
-                metalness:         0.6,
+                emissiveIntensity: 0.12,
+                roughness:         0.02,
+                metalness:         0.25,
                 clearcoat:         1.0,
                 transparent:       true,
-                opacity:           0.60
+                opacity:           0.09,
+                side:              THREE.BackSide,
+                transmission:      0.35,
+                ior:               1.32
+            });
+            const shellMesh = new THREE.Mesh(shellGeo, shellMat);
+            scene.add(shellMesh);
+
+            // 7. Precision Instrument Gimbal Rings (Jamie McKaye Aperture & Instrument Aesthetic)
+            const ringGeo1 = new THREE.TorusGeometry(1.94, 0.011, 32, 200);
+            const ringMat1 = new THREE.MeshPhysicalMaterial({
+                color:             new THREE.Color('#853953'),
+                emissive:          new THREE.Color('#853953'),
+                emissiveIntensity: 0.45,
+                roughness:         0.06,
+                metalness:         0.94,
+                clearcoat:         1.0,
+                clearcoatRoughness: 0.03,
+                reflectivity:      1.0
             });
             const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
-            ring1.rotation.x = Math.PI / 3;
-            ring1.rotation.y = Math.PI / 6;
+            ring1.rotation.x = Math.PI / 3.2;
+            ring1.rotation.y = Math.PI / 6.0;
             scene.add(ring1);
 
-            const ringGeo2 = new THREE.TorusGeometry(2.10, 0.007, 24, 160);
+            const ringGeo2 = new THREE.TorusGeometry(2.20, 0.008, 32, 200);
             const ringMat2 = new THREE.MeshPhysicalMaterial({
-                color:       new THREE.Color('#f3f4f4'),  // --text-white
-                roughness:   0.0,
-                metalness:   0.9,
-                clearcoat:   1.0,
-                transparent: true,
-                opacity:     0.20
+                color:             new THREE.Color('#f3f4f4'),
+                emissive:          new THREE.Color('#c5b8c1'),
+                emissiveIntensity: 0.16,
+                roughness:         0.03,
+                metalness:         0.98,
+                clearcoat:         1.0,
+                clearcoatRoughness: 0.02,
+                reflectivity:      1.0,
+                transparent:       true,
+                opacity:           0.75
             });
             const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
             ring2.rotation.x = -Math.PI / 4;
             ring2.rotation.z =  Math.PI / 4;
             scene.add(ring2);
 
-            const ringGeo3 = new THREE.TorusGeometry(1.72, 0.008, 24, 140);
+            const ringGeo3 = new THREE.TorusGeometry(1.78, 0.009, 32, 180);
             const ringMat3 = new THREE.MeshPhysicalMaterial({
-                color:             new THREE.Color('#612D53'),  // --teal-dim
+                color:             new THREE.Color('#612D53'),
                 emissive:          new THREE.Color('#612D53'),
-                emissiveIntensity: 0.40,
-                roughness:         0.0,
-                metalness:         0.7,
+                emissiveIntensity: 0.50,
+                roughness:         0.08,
+                metalness:         0.90,
                 clearcoat:         1.0,
+                clearcoatRoughness: 0.04,
                 transparent:       true,
-                opacity:           0.38
+                opacity:           0.82
             });
             const ring3 = new THREE.Mesh(ringGeo3, ringMat3);
-            ring3.rotation.y =  Math.PI / 5;
-            ring3.rotation.z = -Math.PI / 3;
+            ring3.rotation.y =  Math.PI / 4.8;
+            ring3.rotation.z = -Math.PI / 2.8;
             scene.add(ring3);
 
-            // 5. Orbiting Nano Particles — palette silver + rosewood
-            function makeParticles(count, rMin, rMax, color, size, opacity) {
-                const geo = new THREE.BufferGeometry();
-                const pos = new Float32Array(count * 3);
-                for (let i = 0; i < count; i++) {
-                    const theta = Math.random() * Math.PI * 2;
-                    const phi   = Math.acos((Math.random() * 2) - 1);
-                    const r     = rMin + Math.random() * (rMax - rMin);
-                    pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-                    pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-                    pos[i * 3 + 2] = r * Math.cos(phi);
-                }
-                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                const mat = new THREE.PointsMaterial({ color: new THREE.Color(color), size, transparent: true, opacity });
-                return new THREE.Points(geo, mat);
-            }
-            const particles  = makeParticles(36, 1.8, 2.5, '#c5b8c1', 0.032, 0.70);  // silver
-            const particles2 = makeParticles(22, 1.5, 1.8, '#853953', 0.026, 0.50);  // rosewood
-            scene.add(particles);
-            scene.add(particles2);
+            // 8. Orbiting Streamline Particles (Curl-Noise Vector Field Simulation)
+            const PARTICLE_COUNT = 140;
+            const particleGeo = new THREE.BufferGeometry();
+            const particlePos = new Float32Array(PARTICLE_COUNT * 3);
+            const particleColors = new Float32Array(PARTICLE_COUNT * 3);
+            const particleData = [];
 
-            // 6. Cinematic Lighting — tuned to palette
-            // Key — warm rose-gold from top-right (main surface illumination)
-            const keyLight = new THREE.DirectionalLight('#ffcce0', 2.6);
+            const pColorPalette = [
+                new THREE.Color('#853953'),
+                new THREE.Color('#612D53'),
+                new THREE.Color('#c5b8c1'),
+                new THREE.Color('#f3f4f4'),
+                new THREE.Color('#d4628a')
+            ];
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                const rad = 1.75 + Math.random() * 0.95;
+                const x = rad * Math.sin(phi) * Math.cos(theta);
+                const y = rad * Math.sin(phi) * Math.sin(theta);
+                const z = rad * Math.cos(phi);
+
+                particlePos[i * 3]     = x;
+                particlePos[i * 3 + 1] = y;
+                particlePos[i * 3 + 2] = z;
+
+                const col = pColorPalette[Math.floor(Math.random() * pColorPalette.length)];
+                particleColors[i * 3]     = col.r;
+                particleColors[i * 3 + 1] = col.g;
+                particleColors[i * 3 + 2] = col.b;
+
+                particleData.push({
+                    theta, phi, rad,
+                    baseRad: rad,
+                    speedTheta: (0.16 + Math.random() * 0.36) * (Math.random() > 0.5 ? 1 : -1),
+                    speedPhi:   (0.08 + Math.random() * 0.18) * (Math.random() > 0.5 ? 1 : -1),
+                    phase: Math.random() * Math.PI * 2,
+                    twinkleSpeed: 1.4 + Math.random() * 2.8
+                });
+            }
+
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+            particleGeo.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+
+            const particleMat = new THREE.PointsMaterial({
+                size: 0.046,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.85,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const particleSystem = new THREE.Points(particleGeo, particleMat);
+            scene.add(particleSystem);
+
+            // 9. Cinematic Studio Lights
+            const keyLight = new THREE.DirectionalLight('#ffe0ec', 2.8);
             keyLight.position.set(5, 6, 4);
             scene.add(keyLight);
 
-            // Rim — deep plum backlight (edge separation + depth)
-            const rimLight = new THREE.DirectionalLight('#612D53', 2.2);
-            rimLight.position.set(-6, -2, -3);
+            const rimLight = new THREE.DirectionalLight('#853953', 2.5);
+            rimLight.position.set(-6, -2, -4);
             scene.add(rimLight);
 
-            // Fill — pale ice from below (lifts shadow side, prevents black)
-            const fillLight = new THREE.DirectionalLight('#f3f4f4', 0.55);
+            const fillLight = new THREE.DirectionalLight('#f3f4f4', 0.85);
             fillLight.position.set(-3, -4, 3);
             scene.add(fillLight);
 
-            // Specular — bright ice-white overhead (crisp specular highlight)
-            const specularLight = new THREE.PointLight('#ffffff', 2.0, 12);
-            specularLight.position.set(0, 5, 3);
+            const specularLight = new THREE.PointLight('#ffffff', 3.0, 14);
+            specularLight.position.set(0, 5, 3.5);
             scene.add(specularLight);
 
-            // Accent — rosewood orbiting fill (animated in animate())
-            const accentLight = new THREE.PointLight('#853953', 2.2, 7);
+            const accentLight = new THREE.PointLight('#e86b97', 2.4, 9);
             accentLight.position.set(2, -1, 5);
             scene.add(accentLight);
 
-            // Kicker — deep plum from rear (animated in animate())
-            const kickerLight = new THREE.PointLight('#612D53', 1.6, 9);
+            const kickerLight = new THREE.PointLight('#612D53', 2.0, 10);
             kickerLight.position.set(4, 1, -4);
             scene.add(kickerLight);
 
-            // Ambient — very dim charcoal base (avoid total black shadows)
-            const ambientLight = new THREE.AmbientLight('#2C2C2C', 3.5);
+            const ambientLight = new THREE.AmbientLight('#2C2C2C', 3.8);
             scene.add(ambientLight);
 
-        let targetRotX = 0, targetRotY = 0;
-        let currentRotX = 0, currentRotY = 0;
-        let currentTwist = 0;
-        let twistVel = 0;
-        let vortexSpin = 0;
-        let isVisible = true;
+            // 10. High-Performance 3D Simplex & Curl Noise Generators
+            const F3 = 1.0 / 3.0, G3 = 1.0 / 6.0;
+            const pPerm = new Uint8Array(512);
+            const permTable = [
+                151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,251,34,242,193,238,210,144,12,191,179,162,241,81,51,145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,84,204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
+            ];
+            for (let i = 0; i < 512; i++) pPerm[i] = permTable[i & 255];
 
-        const observer = new IntersectionObserver((entries) => {
-            isVisible = entries[0].isIntersecting;
-        }, { threshold: 0.05 });
-        observer.observe(wrapper);
+            const gradTable = [
+                [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+                [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+                [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+            ];
 
-        window.addEventListener('mousemove', (e) => {
-            const nx = (e.clientX / window.innerWidth) * 2 - 1;
-            const ny = -(e.clientY / window.innerHeight) * 2 + 1;
-            targetRotY = nx * 0.55;
-            targetRotX = -ny * 0.42;
-        }, { passive: true });
-
-        // ── 6-Octave fBm Fluid Wave — organic, smooth, no crinkling ──
-        function hash(n) { return Math.sin(n) * 43758.5453123; }
-        function noise3(x, y, z) {
-            const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
-            const fx = x - ix, fy = y - iy, fz = z - iz;
-            const ux = fx * fx * (3 - 2 * fx),
-                  uy = fy * fy * (3 - 2 * fy),
-                  uz = fz * fz * (3 - 2 * fz);
-            const a = hash(ix + iy * 57 + iz * 113),
-                  b = hash(ix + 1 + iy * 57 + iz * 113),
-                  c = hash(ix + (iy + 1) * 57 + iz * 113),
-                  d = hash(ix + 1 + (iy + 1) * 57 + iz * 113),
-                  e = hash(ix + iy * 57 + (iz + 1) * 113),
-                  f = hash(ix + 1 + iy * 57 + (iz + 1) * 113),
-                  g = hash(ix + (iy + 1) * 57 + (iz + 1) * 113),
-                  h = hash(ix + 1 + (iy + 1) * 57 + (iz + 1) * 113);
-            return a + (b-a)*ux + (c-a)*uy + (d-a-b-c+a)*ux*uy +
-                   (e-a)*uz + (f-e-b+a)*ux*uz + (g-e-c+a)*uy*uz +
-                   (h-g-f+e-d+c+b-a)*ux*uy*uz;
-        }
-        function fbm(x, y, z) {
-            let v = 0, amp = 0.5, freq = 1.8;
-            for (let o = 0; o < 6; o++) {
-                v += amp * noise3(x * freq, y * freq, z * freq);
-                amp *= 0.5; freq *= 2.1;
+            function simplex3D(x, y, z) {
+                const s = (x + y + z) * F3;
+                const i = Math.floor(x + s), j = Math.floor(y + s), k = Math.floor(z + s);
+                const t = (i + j + k) * G3;
+                const X0 = i - t, Y0 = j - t, Z0 = k - t;
+                const x0 = x - X0, y0 = y - Y0, z0 = z - Z0;
+                let i1, j1, k1, i2, j2, k2;
+                if (x0 >= y0) {
+                    if (y0 >= z0)      { i1=1; j1=0; k1=0; i2=1; j2=1; k2=0; }
+                    else if (x0 >= z0) { i1=1; j1=0; k1=0; i2=1; j2=0; k2=1; }
+                    else               { i1=0; j1=0; k1=1; i2=1; j2=0; k2=1; }
+                } else {
+                    if (y0 < z0)       { i1=0; j1=0; k1=1; i2=0; j2=1; k2=1; }
+                    else if (x0 < z0)  { i1=0; j1=1; k1=0; i2=0; j2=1; k2=1; }
+                    else               { i1=0; j1=1; k1=0; i2=1; j2=1; k2=0; }
+                }
+                const x1 = x0 - i1 + G3, y1 = y0 - j1 + G3, z1 = z0 - k1 + G3;
+                const x2 = x0 - i2 + 2*G3, y2 = y0 - j2 + 2*G3, z2 = z0 - k2 + 2*G3;
+                const x3 = x0 - 1 + 3*G3, y3 = y0 - 1 + 3*G3, z3 = z0 - 1 + 3*G3;
+                const ii = i & 255, jj = j & 255, kk = k & 255;
+                let n0 = 0, n1 = 0, n2 = 0, n3 = 0;
+                let t0 = 0.6 - x0*x0 - y0*y0 - z0*z0;
+                if (t0 > 0) { t0 *= t0; const gi = pPerm[ii + pPerm[jj + pPerm[kk]]] % 12; n0 = t0 * t0 * (gradTable[gi][0]*x0 + gradTable[gi][1]*y0 + gradTable[gi][2]*z0); }
+                let t1 = 0.6 - x1*x1 - y1*y1 - z1*z1;
+                if (t1 > 0) { t1 *= t1; const gi = pPerm[ii + i1 + pPerm[jj + j1 + pPerm[kk + k1]]] % 12; n1 = t1 * t1 * (gradTable[gi][0]*x1 + gradTable[gi][1]*y1 + gradTable[gi][2]*z1); }
+                let t2 = 0.6 - x2*x2 - y2*y2 - z2*z2;
+                if (t2 > 0) { t2 *= t2; const gi = pPerm[ii + i2 + pPerm[jj + j2 + pPerm[kk + k2]]] % 12; n2 = t2 * t2 * (gradTable[gi][0]*x2 + gradTable[gi][1]*y2 + gradTable[gi][2]*z2); }
+                let t3 = 0.6 - x3*x3 - y3*y3 - z3*z3;
+                if (t3 > 0) { t3 *= t3; const gi = pPerm[ii + 1 + pPerm[jj + 1 + pPerm[kk + 1]]] % 12; n3 = t3 * t3 * (gradTable[gi][0]*x3 + gradTable[gi][1]*y3 + gradTable[gi][2]*z3); }
+                return 32.0 * (n0 + n1 + n2 + n3);
             }
-            return v;
-        }
-        function fluidWave(x, y, z, t) {
-            // Domain-warped fBm — the positions themselves are warped before sampling
-            const warpStr = 0.55;
-            const wx = x + warpStr * Math.sin(z * 1.4 + t * 0.7);
-            const wy = y + warpStr * Math.sin(x * 1.4 + t * 0.8);
-            const wz = z + warpStr * Math.sin(y * 1.4 + t * 0.6);
-            const base = fbm(wx + t * 0.18, wy + t * 0.14, wz + t * 0.16);
-            // Layered harmonic overtones for that liquid glass shimmer
-            const detail = Math.sin(x * 3.2 + t * 1.1) * 0.06
-                         + Math.cos(y * 2.8 - t * 0.9) * 0.05
-                         + Math.sin(z * 3.5 + t * 0.75) * 0.04;
-            return (base - 0.5) * 0.38 + detail;
-        }
 
-        const clock = new THREE.Clock();
+            // Divergence-Free 3D Curl Noise Field (Jamie McKaye Laminar Flow Physics)
+            function curlNoise(x, y, z, t) {
+                const e = 0.09;
+                const n1 = simplex3D(x, y + e, z + t);
+                const n2 = simplex3D(x, y - e, z + t);
+                const n3 = simplex3D(x, y, z + e + t);
+                const n4 = simplex3D(x, y, z - e + t);
+                const n5 = simplex3D(x + e, y, z + t);
+                const n6 = simplex3D(x - e, y, z + t);
+                return {
+                    x: (n1 - n2) / (2 * e),
+                    y: (n3 - n4) / (2 * e),
+                    z: (n5 - n6) / (2 * e)
+                };
+            }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!isVisible) return;
+            // 11. Hydrodynamic Wave & Interactive Shockwave Equation
+            let mouseWaveAmp = 0;
+            let ripplePhase = 0;
 
-            const dt = Math.min(clock.getDelta(), 0.08);
-            const time = clock.getElapsedTime() * 0.30;  // slightly slower = more majestic
+            function fluidWave(nx, ny, nz, t) {
+                // Domain-warped curl flow
+                const c = curlNoise(nx * 0.85, ny * 0.85, nz * 0.85, t * 0.22);
+                const fine = simplex3D(nx * 1.7 + c.x * 0.35, ny * 1.7 + c.y * 0.35, nz * 1.7 + t * 0.40) * 0.11;
+                const micro = Math.sin(nx * 3.4 + t * 1.2) * Math.cos(ny * 3.2 - t * 1.0) * 0.04;
+                const base = (c.x * 0.17 + c.y * 0.15 + fine + micro);
 
-            // Sync with global cursor tracker & circling gesture detector
-            const trackerState = cursorTracker.update(dt);
-            const circlingIntensity = trackerState.circlingIntensity;
+                // Hydrodynamic shockwave ripple (decays radially)
+                let ripple = 0;
+                if (mouseWaveAmp > 0.005) {
+                    const dist = Math.sqrt(nx * nx + ny * ny);
+                    ripple = Math.sin(dist * 9.0 - ripplePhase) * Math.exp(-dist * 2.2) * mouseWaveAmp;
+                }
+                return base + ripple;
+            }
 
-            // ── Frame-rate independent smooth rotation damping ──
-            const lerpFactor = 1.0 - Math.exp(-4.8 * dt);
-            currentRotX += (targetRotX - currentRotX) * lerpFactor;
-            currentRotY += (targetRotY - currentRotY) * lerpFactor;
+            // 12. Interactive Pointer Mechanics (Click-and-Drag & Gyro Parallax)
+            let isDragging = false;
+            let prevPointerX = 0, prevPointerY = 0;
+            let dragVelX = 0, dragVelY = 0;
+            let targetRotX = 0, targetRotY = 0;
+            let currentRotX = 0, currentRotY = 0;
+            let hoverRotX = 0, hoverRotY = 0;
+            let currentTwist = 0, twistVel = 0;
+            let vortexSpin = 0;
+            let isVisible = true;
 
-            // ── Dynamic Vortex Twist Deformation Physics (Spring-Damper) ──
-            const targetTwist = circlingIntensity * 1.25;
-            const twistDiff = targetTwist - currentTwist;
-            twistVel += (twistDiff * 14.0 - twistVel * 5.5) * dt;
-            currentTwist += twistVel * dt;
+            const observer = new IntersectionObserver((entries) => {
+                isVisible = entries[0].isIntersecting;
+            }, { threshold: 0.05 });
+            observer.observe(wrapper);
 
-            // ── Rotational Vortex Spin Acceleration ──
-            vortexSpin += currentTwist * 0.60 * dt;
-            vortexSpin *= Math.exp(-1.6 * dt);
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                prevPointerX = e.clientX;
+                prevPointerY = e.clientY;
+                dragVelX = 0;
+                dragVelY = 0;
+                mouseWaveAmp = Math.min(mouseWaveAmp + 0.32, 0.55);
+                try { renderer.domElement.setPointerCapture(e.pointerId); } catch(_) {}
+            });
 
-            blobMesh.rotation.x = currentRotX + time * 0.07;
-            blobMesh.rotation.y = currentRotY + time * 0.10 + vortexSpin;
-            blobMesh.rotation.z = currentTwist * 0.28;
+            window.addEventListener('pointermove', (e) => {
+                if (isDragging) {
+                    const dx = e.clientX - prevPointerX;
+                    const dy = e.clientY - prevPointerY;
+                    prevPointerX = e.clientX;
+                    prevPointerY = e.clientY;
+                    dragVelX = dx * 0.006;
+                    dragVelY = dy * 0.006;
+                    targetRotY += dragVelX;
+                    targetRotX += dragVelY;
+                    mouseWaveAmp = Math.min(mouseWaveAmp + Math.hypot(dx, dy) * 0.003, 0.55);
+                } else {
+                    const nx = (e.clientX / window.innerWidth) * 2 - 1;
+                    const ny = -(e.clientY / window.innerHeight) * 2 + 1;
+                    hoverRotY = nx * 0.48;
+                    hoverRotX = -ny * 0.36;
+                }
+            }, { passive: true });
 
-            // Shell counter-rotates gently for silky parallax depth & crystal refraction
-            shellMesh.rotation.x = -(currentRotX * 0.25) + time * 0.03;
-            shellMesh.rotation.y = -(currentRotY * 0.25) + time * 0.05 - vortexSpin * 0.4;
-            shellMesh.rotation.z = -currentTwist * 0.16;
+            const endDrag = (e) => {
+                if (isDragging) {
+                    isDragging = false;
+                    try { renderer.domElement.releasePointerCapture(e.pointerId); } catch(_) {}
+                }
+            };
+            window.addEventListener('pointerup', endDrag);
+            window.addEventListener('pointercancel', endDrag);
 
-            // ── Gyroscope Rings React to Vortex Swirl ──
-            const swirlFactor = 1.0 + Math.abs(currentTwist) * 2.6;
-            ring1.rotation.z += (0.005 * swirlFactor) + currentTwist * 0.022;
-            ring1.rotation.y += 0.003 * swirlFactor;
-            ring2.rotation.x += (0.004 * swirlFactor) - currentTwist * 0.016;
-            ring2.rotation.z -= 0.005 * swirlFactor;
-            ring3.rotation.y += (0.006 * swirlFactor) + currentTwist * 0.024;
-            ring3.rotation.x -= 0.003 * swirlFactor;
+            // Light / Dark Mode Color Tuning
+            const updateTheme = () => {
+                const isLight = document.body.classList.contains('light-mode');
+                if (isLight) {
+                    material.color.set('#b6557e');
+                    material.emissive.set('#78315a');
+                    material.emissiveIntensity = 0.24;
+                    ambientLight.color.set('#f3f4f4');
+                    ambientLight.intensity = 2.8;
+                    keyLight.intensity = 2.4;
+                    renderer.toneMappingExposure = 1.08;
+                } else {
+                    material.color.set('#a3446b');
+                    material.emissive.set('#461836');
+                    material.emissiveIntensity = 0.34;
+                    ambientLight.color.set('#2C2C2C');
+                    ambientLight.intensity = 3.8;
+                    keyLight.intensity = 2.8;
+                    renderer.toneMappingExposure = 1.22;
+                }
+            };
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.addEventListener('click', () => setTimeout(updateTheme, 50));
+            }
+            updateTheme();
 
-            // Orbiting Particles accelerate inside the vortex
-            particles.rotation.y -= (0.002 * swirlFactor) + currentTwist * 0.015;
-            particles.rotation.x += 0.001 * swirlFactor;
-            particles2.rotation.y += (0.003 * swirlFactor) + currentTwist * 0.018;
-            particles2.rotation.z -= 0.001 * swirlFactor;
+            const clock = new THREE.Clock();
 
-            const absTwist = Math.abs(currentTwist);
+            // 13. High-Performance Render Loop (60fps)
+            function animate() {
+                requestAnimationFrame(animate);
+                if (!isVisible) return;
 
-            // Slow-breathing emissive — rosewood glow inhale/exhale
-            const breathe = Math.sin(time * 0.8) * 0.5 + 0.5;
-            const pulse = 0.16 + breathe * 0.18 + Math.sin(time * 3.1) * 0.03 + absTwist * 0.35;
-            material.emissiveIntensity = pulse;
+                const dt = Math.min(clock.getDelta(), 0.08);
+                const time = clock.getElapsedTime() * 0.32;
 
-            // Iridescence shifts: rose→plum→ice as it breathes
-            material.iridescence = 0.70 + Math.sin(time * 0.75) * 0.20 + absTwist * 0.30;
-            // Sheen roughness breathes with the emissive
-            material.sheenRoughness = 0.18 + breathe * 0.14;
+                // Sync with cursor circling detector
+                const trackerState = (typeof cursorTracker !== 'undefined' && cursorTracker.update) ? cursorTracker.update(dt) : { circlingIntensity: 0 };
+                const circlingIntensity = trackerState.circlingIntensity || 0;
 
-            // ── Accent light orbit ──
-            accentLight.position.x = Math.sin(time * 1.2) * 3.5;
-            accentLight.position.y = Math.cos(time * 0.9) * 2.5;
-            kickerLight.position.x = Math.cos(time * 0.8) * 4.0;
-            kickerLight.position.z = Math.sin(time * 1.1) * 4.0;
+                // Drag Inertia & Parallax Easing
+                if (isDragging) {
+                    currentRotX = targetRotX;
+                    currentRotY = targetRotY;
+                } else {
+                    // Viscous deceleration of drag spin
+                    targetRotX += dragVelX;
+                    targetRotY += dragVelY;
+                    dragVelX *= Math.exp(-3.2 * dt);
+                    dragVelY *= Math.exp(-3.2 * dt);
 
-            // ── Domain-Warped fBm Vertex Deformation ──
-            const positions = posAttr.array;
-            const count = posAttr.count;
-
-            for (let i = 0; i < count; i++) {
-                const idx = i * 3;
-                const ox = origPos[idx];
-                const oy = origPos[idx + 1];
-                const oz = origPos[idx + 2];
-
-                // Torsional twist along vertical Y axis
-                const yNorm = oy / 1.30;
-                const twistAngle = yNorm * currentTwist * 1.55;
-                const cosT = Math.cos(twistAngle);
-                const sinT = Math.sin(twistAngle);
-
-                let tx = ox * cosT - oz * sinT;
-                let ty = oy;
-                let tz = ox * sinT + oz * cosT;
-
-                // Vortex waist cinch
-                if (absTwist > 0.03) {
-                    const waistPinch = 1.0 - absTwist * 0.18 * Math.cos(yNorm * (Math.PI * 0.5));
-                    tx *= waistPinch;
-                    tz *= waistPinch;
+                    const targetX = targetRotX + hoverRotX;
+                    const targetY = targetRotY + hoverRotY;
+                    const lerpFactor = 1.0 - Math.exp(-4.6 * dt);
+                    currentRotX += (targetX - currentRotX) * lerpFactor;
+                    currentRotY += (targetY - currentRotY) * lerpFactor;
                 }
 
-                const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
-                const nx = tx / len;
-                const ny = ty / len;
-                const nz = tz / len;
+                // Hydrodynamic Shockwave Propagation & Dissipation
+                ripplePhase += dt * 8.5;
+                mouseWaveAmp *= Math.exp(-2.2 * dt);
 
-                // Domain-warped fBm displacement — rich, organic, glass-liquid surface
-                const wave = fluidWave(nx, ny, nz, time);
-                const radius = 1.30 + wave;
-                positions[idx]     = nx * radius;
-                positions[idx + 1] = ny * radius;
-                positions[idx + 2] = nz * radius;
+                // Vortex Twist & Spring-Damper Physics
+                const targetTwist = circlingIntensity * 1.30;
+                const twistDiff = targetTwist - currentTwist;
+                twistVel += (twistDiff * 14.0 - twistVel * 5.5) * dt;
+                currentTwist += twistVel * dt;
+
+                vortexSpin += currentTwist * 0.60 * dt;
+                vortexSpin *= Math.exp(-1.6 * dt);
+
+                blobMesh.rotation.x = currentRotX + time * 0.08;
+                blobMesh.rotation.y = currentRotY + time * 0.11 + vortexSpin;
+                blobMesh.rotation.z = currentTwist * 0.28;
+
+                // Inner Core Counter-Rotation & Optical Pulse
+                coreMesh.rotation.x = -(currentRotX * 0.5) - time * 0.12;
+                coreMesh.rotation.y = -(currentRotY * 0.5) - time * 0.15;
+                const corePulse = 0.70 + Math.sin(time * 1.8) * 0.25 + Math.abs(currentTwist) * 0.4;
+                coreMat.emissiveIntensity = corePulse;
+
+                // Translucent Shell Parallax
+                shellMesh.rotation.x = -(currentRotX * 0.22) + time * 0.03;
+                shellMesh.rotation.y = -(currentRotY * 0.22) + time * 0.05 - vortexSpin * 0.35;
+                shellMesh.rotation.z = -currentTwist * 0.15;
+
+                // Gyroscope Instrument Rings React to Swirl & Angular Velocity
+                const swirlFactor = 1.0 + Math.abs(currentTwist) * 2.5 + Math.hypot(dragVelX, dragVelY) * 15.0;
+                ring1.rotation.z += (0.0055 * swirlFactor) + currentTwist * 0.02;
+                ring1.rotation.y += 0.0035 * swirlFactor;
+                ring2.rotation.x += (0.0045 * swirlFactor) - currentTwist * 0.016;
+                ring2.rotation.z -= 0.0055 * swirlFactor;
+                ring3.rotation.y += (0.0065 * swirlFactor) + currentTwist * 0.022;
+                ring3.rotation.x -= 0.0035 * swirlFactor;
+
+                // 3D Curl-Noise Orbiting Particles
+                const pPos = particleGeo.attributes.position.array;
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    const d = particleData[i];
+                    d.theta += d.speedTheta * dt * swirlFactor;
+                    d.phi += d.speedPhi * dt;
+
+                    const c = curlNoise(
+                        Math.cos(d.theta) * 0.8,
+                        Math.sin(d.phi) * 0.8,
+                        time * 0.15,
+                        0
+                    );
+
+                    const r = d.baseRad + c.x * 0.24 + Math.sin(time * d.twinkleSpeed + d.phase) * 0.07;
+                    pPos[i * 3]     = r * Math.sin(d.phi) * Math.cos(d.theta) + c.y * 0.12;
+                    pPos[i * 3 + 1] = r * Math.sin(d.phi) * Math.sin(d.theta) + c.z * 0.12;
+                    pPos[i * 3 + 2] = r * Math.cos(d.phi);
+                }
+                particleGeo.attributes.position.needsUpdate = true;
+
+                // Breathing Emissive & Iridescence
+                const breathe = Math.sin(time * 0.75) * 0.5 + 0.5;
+                material.emissiveIntensity = 0.24 + breathe * 0.18 + Math.abs(currentTwist) * 0.35 + mouseWaveAmp * 0.30;
+                material.iridescence = 0.75 + Math.sin(time * 0.70) * 0.20 + Math.abs(currentTwist) * 0.25;
+
+                // Orbiting Specular Accent Lights
+                accentLight.position.x = Math.sin(time * 1.3) * 3.6;
+                accentLight.position.y = Math.cos(time * 0.95) * 2.6;
+                kickerLight.position.x = Math.cos(time * 0.85) * 4.2;
+                kickerLight.position.z = Math.sin(time * 1.15) * 4.2;
+
+                // Hydrodynamic & Curl-Noise Vertex Displacement
+                const positions = posAttr.array;
+                const absTwist = Math.abs(currentTwist);
+
+                for (let i = 0; i < vertexCount; i++) {
+                    const idx = i * 3;
+                    const ox = origPos[idx];
+                    const oy = origPos[idx + 1];
+                    const oz = origPos[idx + 2];
+
+                    // Torsional twist along vertical Y axis
+                    const yNorm = oy / 1.35;
+                    const twistAngle = yNorm * currentTwist * 1.6;
+                    const cosT = Math.cos(twistAngle);
+                    const sinT = Math.sin(twistAngle);
+
+                    let tx = ox * cosT - oz * sinT;
+                    let ty = oy;
+                    let tz = ox * sinT + oz * cosT;
+
+                    // Vortex waist cinch
+                    if (absTwist > 0.03) {
+                        const waistPinch = 1.0 - absTwist * 0.18 * Math.cos(yNorm * (Math.PI * 0.5));
+                        tx *= waistPinch;
+                        tz *= waistPinch;
+                    }
+
+                    const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
+                    const nx = tx / len;
+                    const ny = ty / len;
+                    const nz = tz / len;
+
+                    // Fluid Wave & Shockwave Displacement
+                    const wave = fluidWave(nx, ny, nz, time);
+                    const radius = 1.35 + wave;
+                    positions[idx]     = nx * radius;
+                    positions[idx + 1] = ny * radius;
+                    positions[idx + 2] = nz * radius;
+                }
+
+                posAttr.needsUpdate = true;
+                blobMesh.geometry.computeVertexNormals();
+                renderer.render(scene, camera);
             }
 
-            posAttr.needsUpdate = true;
-            blobMesh.geometry.computeVertexNormals();
-            renderer.render(scene, camera);
-        }
-
-        animate();
+            animate();
         })();
 
         // ───── Hide Mouse Indicator on Scroll ─────
