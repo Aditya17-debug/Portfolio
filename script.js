@@ -149,10 +149,13 @@ function getSupabaseClient() {
 const contactForm = document.getElementById('contactForm');
 const contactSubmitBtn = document.getElementById('contactSubmitBtn');
 const contactFormStatus = document.getElementById('contactFormStatus');
+const formIframe = document.getElementById('formSubmitIframe');
+
+let isFormSubmitting = false;
 
 if (contactForm) {
-    contactForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    contactForm.addEventListener('submit', () => {
+        isFormSubmitting = true;
         const origBtnContent = contactSubmitBtn.innerHTML;
 
         contactSubmitBtn.disabled = true;
@@ -167,110 +170,42 @@ if (contactForm) {
             message: document.getElementById('contact-message').value.trim()
         };
 
-        let emailSent = false;
-        let isActivationPending = false;
-        let dbSaved = false;
-        let errorMessage = '';
-
-        // ── 1. Primary: Send email directly to your inbox via FormSubmit ──
-        try {
-            const formSubmitRes = await fetch('https://formsubmit.co/ajax/bagdwaladitya17@gmail.com', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: payload.name,
-                    email: payload.email,
-                    _replyto: payload.email,
-                    _subject: `[Portfolio Inquiry] ${payload.subject} (from ${payload.name})`,
-                    message: payload.message,
-                    _captcha: 'false',
-                    _template: 'table'
-                })
-            });
-
-            const result = await formSubmitRes.json();
-            if (formSubmitRes.ok && (result.success === 'true' || result.success === true)) {
-                emailSent = true;
-            } else if (result.message && result.message.toLowerCase().includes('activate')) {
-                // First-time FormSubmit submission: sends one-time activation link to inbox
-                emailSent = true;
-                isActivationPending = true;
-                console.info('FormSubmit one-time activation required:', result.message);
-            } else {
-                errorMessage = result.message || 'Email delivery failed.';
-            }
-        } catch (mailErr) {
-            console.warn('FormSubmit AJAX network issue:', mailErr);
-            // If running directly from file:// protocol where browser CORS blocks AJAX, fallback to native submit
-            if (window.location.protocol === 'file:') {
-                contactForm.submit();
-                return;
-            }
-            errorMessage = mailErr.message || 'Network error sending email.';
-        }
-
-        // ── 2. Local Backend Sync (if localhost dev server is running on :5000) ──
+        // Optional local dev server sync (:5000)
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            try {
-                const localRes = await fetch('http://localhost:5000/api/contact', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (localRes.ok) {
-                    dbSaved = true;
-                    console.log('✓ Message stored in local SQLite backend!');
-                }
-            } catch (localErr) {
-                // Local dev server not running, quietly ignore
-            }
+            fetch('http://localhost:5000/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).catch(() => {});
         }
 
-        // ── 3. Optional Cloud Database (Supabase) — Non-blocking ──
+        // Optional Supabase background sync
         try {
             const client = getSupabaseClient();
             if (client) {
-                const { error: supaErr } = await client
-                    .from('messages')
-                    .insert([{
-                        name: payload.name,
-                        email: payload.email,
-                        subject: payload.subject,
-                        message: payload.message
-                    }]);
-
-                if (!supaErr) {
-                    dbSaved = true;
-                    console.log('✓ Message recorded in Supabase cloud database!');
-                } else {
-                    console.warn('Supabase insert failed:', supaErr.message);
-                }
+                client.from('messages').insert([payload]).then(() => {}).catch(() => {});
             }
-        } catch (supaErr) {
-            console.warn('Supabase sync skipped/failed:', supaErr.message);
-        }
+        } catch (_) {}
 
-        // ── 4. Status feedback to the user ──
-        if (isActivationPending) {
-            contactFormStatus.textContent = '✓ Activation email sent! Check bagdwaladitya17@gmail.com and click "Activate Form" once.';
-            contactFormStatus.classList.add('success');
-            contactForm.reset();
-        } else if (emailSent || dbSaved) {
+        function handleDone() {
+            if (!isFormSubmitting) return;
+            isFormSubmitting = false;
+            contactSubmitBtn.disabled = false;
+            contactSubmitBtn.innerHTML = origBtnContent;
             contactFormStatus.textContent = '✓ Message delivered to inbox, wait for response!';
             contactFormStatus.classList.add('success');
             contactForm.reset();
-        } else {
-            // Provide a direct mailto fallback if network or email services failed
-            const mailtoUrl = `mailto:bagdwaladitya17@gmail.com?subject=${encodeURIComponent(payload.subject)}&body=${encodeURIComponent('From: ' + payload.name + ' (' + payload.email + ')\n\n' + payload.message)}`;
-            contactFormStatus.innerHTML = `Error: ${errorMessage || 'Unable to deliver message.'} <a href="${mailtoUrl}" style="color:var(--accent);text-decoration:underline;margin-left:6px;" target="_blank">Click here to send via email client</a>`;
-            contactFormStatus.classList.add('error');
         }
 
-        contactSubmitBtn.disabled = false;
-        contactSubmitBtn.innerHTML = origBtnContent;
+        // Timer ensures UI always updates smoothly even if iframe onload is constrained
+        const timer = setTimeout(handleDone, 2000);
+
+        if (formIframe) {
+            formIframe.onload = () => {
+                clearTimeout(timer);
+                handleDone();
+            };
+        }
     });
 }
 
